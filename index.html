@@ -1372,7 +1372,8 @@ function gravarSnapshotMensal() {
 function saveMetas() {
   metas.ativosDepto    = parseInt(document.getElementById('metaAtivosDepto').value)||20;
   metas.batizadosDepto = parseInt(document.getElementById('metaBatizadosDepto').value)||10;
-  saveData();
+  localStorage.setItem('metas',JSON.stringify(metas));
+  schedulePush();
   showToast('Metas salvas!');
   if(currentPage==='metas') renderMetas();
 }
@@ -2540,6 +2541,7 @@ function saveRegras() {
   regras.oscilando=parseInt(document.getElementById('regOscilando').value)||40;
   regras.risco=parseInt(document.getElementById('regRisco').value)||3;
   localStorage.setItem('regras',JSON.stringify(regras));
+  schedulePush();
   showToast('Regras salvas!');
 }
 
