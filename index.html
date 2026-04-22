@@ -1190,7 +1190,7 @@ function pararAutoSync() {
 async function pushToSheets() {
   if(!GAS_URL||syncPending) return; syncPending=true; showSyncBadge('syncing');
   try {
-    const r = await fetch(GAS_URL, { method:'POST', body: JSON.stringify({
+    const r = await fetch(GAS_URL, { method:'POST', headers:{'Content-Type':'text/plain'}, body: JSON.stringify({
       action:'push',
       jovens, frequencias, recuperacoes, departamentos, lideres,
       historicoMensal, metas, regras, atividades,
@@ -1202,7 +1202,7 @@ async function pushToSheets() {
 async function pullFromSheets() {
   if(!GAS_URL) return; showSyncBadge('syncing');
   try {
-    const r = await fetch(GAS_URL+'?action=pull'); const d = await r.json();
+    const r = await fetch(GAS_URL); const d = await r.json();
     if(d.jovens)          { jovens=d.jovens;                       localStorage.setItem('jovens',JSON.stringify(jovens)); }
     if(d.frequencias)     { frequencias=d.frequencias;             localStorage.setItem('frequencias',JSON.stringify(frequencias)); }
     if(d.recuperacoes)    { recuperacoes=d.recuperacoes;           localStorage.setItem('recuperacoes',JSON.stringify(recuperacoes)); }
@@ -2687,6 +2687,6 @@ function deleteLider(id) {
   lideres=lideres.filter(l=>l.id!==id);
   saveData(); renderLideres(); showToast('Líder excluído');
 }
-</script src="script.js"></script>
+</script>
 </body>
 </html>
