@@ -1169,11 +1169,10 @@ let autoSyncInterval = null; // intervalo de push automático a cada 1 min
 
 function schedulePush() { if(!GAS_URL) return; clearTimeout(syncTimer); syncTimer = setTimeout(pushToSheets, 2000); }
 
-// Inicia o ciclo: push imediato + push a cada 1 minuto
+// Inicia o ciclo: push a cada 1 minuto (sem push imediato — pull já foi feito antes)
 function iniciarAutoSync() {
   if(!GAS_URL) return;
   pararAutoSync(); // limpa qualquer intervalo anterior
-  pushToSheets();  // push imediato ao fazer login
   autoSyncInterval = setInterval(() => {
     pushToSheets();
   }, 60 * 1000);   // a cada 60 segundos
