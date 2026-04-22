@@ -1169,14 +1169,14 @@ let autoSyncInterval = null; // intervalo de push automático a cada 1 min
 
 function schedulePush() { if(!GAS_URL) return; clearTimeout(syncTimer); syncTimer = setTimeout(pushToSheets, 2000); }
 
-// Inicia o ciclo: pull + push a cada 1 minuto
+// Inicia o ciclo: pull a cada 1 minuto (push apenas quando usuário salva)
 function iniciarAutoSync() {
   if(!GAS_URL) return;
   pararAutoSync();
   autoSyncInterval = setInterval(() => {
-    pullFromSheets().then(() => { renderAll(); pushToSheets(); });
+    pullFromSheets().then(() => renderAll());
   }, 60 * 1000);
-  console.log('🔄 AutoSync iniciado — pull+push a cada 1 min');
+  console.log('🔄 AutoSync iniciado — pull a cada 1 min');
 }
 
 // Para o ciclo ao fazer logout
@@ -1199,7 +1199,8 @@ async function pushToSheets() {
   } catch(e) { showSyncBadge('error'); } finally { syncPending=false; }
 }
 function pullFromSheets() {
-  if(!GAS_URL) return Promise.resolve(); showSyncBadge('syncing');
+  if(!GAS_URL) return Promise.resolve();
+  showSyncBadge('syncing');
   return new Promise((resolve, reject) => {
     const cbName = '_rujaCallback_' + Date.now();
     const script = document.createElement('script');
