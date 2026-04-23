@@ -464,6 +464,10 @@ td.mono { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight
       <div class="nav-item" onclick="navigate('config',this)">
         <span class="nav-icon">⚙️</span> Configurações
       </div>
+      <div class="nav-section-label">Acesso Público</div>
+      <div class="nav-item" onclick="window.open('https://ruja-app.lovable.app/','_blank')" style="background:rgba(212,43,43,0.08);border:1px solid rgba(212,43,43,0.2);margin:4px 8px;border-radius:8px;">
+        <span class="nav-icon">🌐</span> <span style="color:var(--red);font-weight:600">RUJA Web</span>
+      </div>
     </nav>
     <div class="sidebar-footer">
       <div class="user-badge">
@@ -749,7 +753,7 @@ td.mono { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight
             <div style="font-size:11px;color:var(--text3);margin-top:6px">Todos os dados sincronizam automaticamente entre os líderes.</div>
           </div>
           <div style="display:flex;gap:10px;margin-top:4px">
-            <button class="btn btn-ghost btn-sm" onclick="pullFromSheets().then(()=>{renderAll();showToast('Dados atualizados!')})">⬇️ Puxar agora</button>
+            <button class="btn btn-ghost btn-sm" onclick="pullFromSheets().then(()=>{renderAll();showToast('Dados atualizados!')}).catch(()=>showToast('Erro ao puxar dados'))">⬇️ Puxar agora</button>
             <button class="btn btn-ghost btn-sm" onclick="pushToSheets()">⬆️ Enviar agora</button>
           </div>
         </div>
@@ -1803,6 +1807,7 @@ function getMsgAtividade(a, tipo) {
       `✔️ Aprovado por: *${quem}*\n` +
       `🕐 Em: ${quando}\n\n` +
       `_Contamos com a presença de todos!_ 🙌\n` +
+      `🌐 Acompanhe: https://ruja-app.lovable.app/\n` +
       `🦁 *RUJA — Rede UniJovem ADJA*`;
   } else {
     const quem    = a.canceladoPor || 'Liderança';
@@ -1816,6 +1821,7 @@ function getMsgAtividade(a, tipo) {
       `✖️ Cancelado por: *${quem}*\n` +
       `🕐 Em: ${quando}\n\n` +
       `_Em breve novas informações. Fiquem atentos!_ 🙏\n` +
+      `🌐 Acompanhe: https://ruja-app.lovable.app/\n` +
       `🦁 *RUJA — Rede UniJovem ADJA*`;
   }
 }
@@ -2675,9 +2681,26 @@ function deleteRecup(id) {
 function saveDepto() {
   const val={ nome:document.getElementById('dNome').value.trim(), icone:document.getElementById('dIcone').value.trim(), lider:document.getElementById('dLider').value, capacidade:parseInt(document.getElementById('dCapacidade').value)||20, desc:document.getElementById('dDesc').value.trim() };
   if(!val.nome) return alert('Preencha o nome.');
+
+  // Nome antigo do departamento (para atualizar jovens que já estavam nele)
+  const nomeAntigo = editingDeptoId ? (departamentos.find(d=>d.id===editingDeptoId)||{}).nome : val.nome;
+
   if(editingDeptoId) { const i=departamentos.findIndex(d=>d.id===editingDeptoId); if(i!==-1) departamentos[i]={...departamentos[i],...val}; }
   else { val.id=Date.now(); departamentos.push(val); }
-  saveData(); closeModal('modalDepto'); showToast('Departamento salvo!'); renderDepartamentos();
+
+  // Atualiza líder de todos os jovens do departamento
+  if(val.lider) {
+    const liderObj = lideres.find(l => l.nome === val.lider || (l.supremo && 'Líder RUJA' === val.lider));
+    const nomeExibido = liderObj?.supremo ? 'Líder RUJA' : val.lider;
+    jovens.forEach(j => {
+      if(j.departamento === nomeAntigo || j.departamento === val.nome) {
+        j.departamento = val.nome; // atualiza nome se mudou
+        j.lider = nomeExibido;
+      }
+    });
+  }
+
+  saveData(); closeModal('modalDepto'); showToast('Departamento salvo!'); renderDepartamentos(); renderJovens();
 }
 function editDepto(id) {
   const d=departamentos.find(x=>x.id===id); if(!d) return;
