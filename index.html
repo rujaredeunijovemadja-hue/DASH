@@ -1195,13 +1195,19 @@ function pararAutoSync() {
 async function pushToSheets() {
   if(!GAS_URL||syncPending) return; syncPending=true; showSyncBadge('syncing');
   try {
-    const r = await fetch(GAS_URL, { method:'POST', headers:{'Content-Type':'text/plain'}, redirect:'follow', body: JSON.stringify({
-      action:'push',
-      jovens, frequencias, recuperacoes, departamentos, lideres,
-      historicoMensal, metas, regras, atividades,
-      usuario: document.getElementById('userName')?.textContent || 'Dashboard',
-    }) });
-    const d = await r.json(); showSyncBadge(d.ok?'ok':'error');
+    await fetch(GAS_URL, {
+      method:'POST',
+      headers:{'Content-Type':'text/plain'},
+      mode:'no-cors',
+      body: JSON.stringify({
+        action:'push',
+        jovens, frequencias, recuperacoes, departamentos, lideres,
+        historicoMensal, metas, regras, atividades,
+        usuario: document.getElementById('userName')?.textContent || 'Dashboard',
+      })
+    });
+    // no-cors não retorna body — assumimos sucesso se não lançar exceção
+    showSyncBadge('ok');
   } catch(e) { showSyncBadge('error'); } finally { syncPending=false; }
 }
 function pullFromSheets() {
