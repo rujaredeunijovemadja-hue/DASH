@@ -966,7 +966,7 @@ td.mono { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight
     <div class="form-row">
       <div class="form-group">
         <label class="form-label">🎂 Data de Nascimento</label>
-        <input type="date" class="form-input" id="jDataNasc">
+        <input type="date" class="form-input" id="jDataNasc" oninput="(function(){const d=document.getElementById('jDataNasc').value;if(d){const hoje=new Date(),nasc=new Date(d);let a=hoje.getFullYear()-nasc.getFullYear();const m=hoje.getMonth()-nasc.getMonth();if(m<0||(m===0&&hoje.getDate()<nasc.getDate()))a--;document.getElementById('jIdade').value=a;document.getElementById('jIdade').readOnly=true;}else{document.getElementById('jIdade').readOnly=false;}})()">
       </div>
       <div class="form-group" style="display:flex;align-items:flex-end">
         <div style="font-size:11px;color:var(--text3)">Necessário para os alertas de aniversário</div>
@@ -1146,6 +1146,12 @@ td.mono { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight
       <div class="form-group">
         <label class="form-label">Função</label>
         <input type="text" class="form-input" id="lFuncao" placeholder="Ex: Líder de Mídia">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group" style="flex-direction:row;align-items:center;gap:10px;padding:10px 14px;background:var(--card2);border-radius:8px;border:1px solid var(--border)">
+        <input type="checkbox" id="lSupremo" style="width:18px;height:18px;accent-color:var(--red);cursor:pointer">
+        <label for="lSupremo" style="cursor:pointer;font-size:14px">🦁 <strong>Líder Supremo da RUJA</strong> — aparece como "Líder RUJA" nos jovens</label>
       </div>
     </div>
     <div class="form-footer">
@@ -2052,7 +2058,7 @@ function openModal(id) {
   const jovemOpts = jovens.map(j=>`<option value="${j.id}">${j.nome}</option>`).join('');
   ['fJovem','rJovem'].forEach(sid=>{ try{ document.getElementById(sid).innerHTML=jovemOpts; }catch(e){} });
   // Preenche selects de líderes
-  const liderOpts = ['<option value="">Sem líder</option>',...lideres.map(l=>`<option value="${l.nome}">${l.nome}</option>`)].join('');
+  const liderOpts = ['<option value="">Sem líder</option>',...lideres.map(l=>`<option value="${l.supremo?'Líder RUJA':l.nome}">${l.supremo?'🦁 Líder RUJA':l.nome}</option>`)].join('');
   ['jLider','rResponsavel'].forEach(sid=>{ try{ document.getElementById(sid).innerHTML=liderOpts; }catch(e){} });
   // Preenche selects de departamentos
   const deptoOpts = ['<option value="">Sem departamento</option>',...departamentos.map(d=>`<option value="${d.nome}">${d.icone||''} ${d.nome}</option>`)].join('');
@@ -2071,6 +2077,9 @@ function closeModal(id) {
   document.getElementById('modalDeptoTitle').textContent='Novo Departamento';
   document.getElementById('modalLiderTitle').textContent='Novo Líder';
   try{ document.getElementById('modalAtivTitle').textContent='Nova Atividade'; }catch(e){}
+  // Reset campos ao fechar
+  try{ document.getElementById('jIdade').readOnly=false; document.getElementById('jDataNasc').value=''; }catch(e){}
+  try{ document.getElementById('lSupremo').checked=false; }catch(e){}
 }
 document.querySelectorAll('.modal-backdrop').forEach(b=>{
   b.addEventListener('click',e=>{ if(e.target===b) b.classList.remove('open'); });
@@ -2552,9 +2561,17 @@ function saveRegras() {
 // CRUD — JOVENS
 // ═══════════════════════════════════════════════
 function saveJovem() {
+  const dataNascVal = document.getElementById('jDataNasc').value;
+  const idadeCalc = dataNascVal ? (()=>{
+    const hoje=new Date(), nasc=new Date(dataNascVal);
+    let age=hoje.getFullYear()-nasc.getFullYear();
+    const m=hoje.getMonth()-nasc.getMonth();
+    if(m<0||(m===0&&hoje.getDate()<nasc.getDate())) age--;
+    return age;
+  })() : (parseInt(document.getElementById('jIdade').value)||null);
   const val={
     nome:document.getElementById('jNome').value.trim(),
-    idade:parseInt(document.getElementById('jIdade').value)||null,
+    idade:idadeCalc,
     contato:document.getElementById('jContato').value.trim(),
     instagram:document.getElementById('jInstagram').value.trim(),
     endereco:document.getElementById('jEndereco').value.trim(),
@@ -2679,11 +2696,30 @@ function deleteDepto(id) {
 // CRUD — LÍDERES
 // ═══════════════════════════════════════════════
 function saveLider() {
-  const val={ nome:document.getElementById('lNome').value.trim(), contato:document.getElementById('lContato').value.trim(), departamento:document.getElementById('lDepartamento').value, funcao:document.getElementById('lFuncao').value.trim() };
+  const val={
+    nome:       document.getElementById('lNome').value.trim(),
+    contato:    document.getElementById('lContato').value.trim(),
+    departamento: document.getElementById('lDepartamento').value,
+    funcao:     document.getElementById('lFuncao').value.trim(),
+    supremo:    document.getElementById('lSupremo').checked,
+  };
   if(!val.nome||!val.contato) return alert('Preencha Nome e WhatsApp.');
+
+  // Se marcado como supremo, desmarca os outros
+  if(val.supremo) lideres.forEach(l => { if(l.id!==editingLiderId) l.supremo=false; });
+
   if(editingLiderId) { const i=lideres.findIndex(l=>l.id===editingLiderId); if(i!==-1) lideres[i]={...lideres[i],...val}; }
   else { val.id=Date.now(); lideres.push(val); }
-  saveData(); closeModal('modalLider'); showToast('Líder salvo!'); renderLideres();
+
+  // Atualiza todos os jovens do departamento com este líder
+  if(val.departamento) {
+    const nomeExibido = val.supremo ? 'Líder RUJA' : val.nome;
+    jovens.forEach(j => {
+      if(j.departamento === val.departamento) j.lider = nomeExibido;
+    });
+  }
+
+  saveData(); closeModal('modalLider'); showToast('Líder salvo!'); renderLideres(); renderJovens();
 }
 function editLider(id) {
   const l=lideres.find(x=>x.id===id); if(!l) return;
@@ -2694,6 +2730,7 @@ function editLider(id) {
     document.getElementById('lContato').value=l.contato;
     document.getElementById('lDepartamento').value=l.departamento||'';
     document.getElementById('lFuncao').value=l.funcao||'';
+    document.getElementById('lSupremo').checked=l.supremo||false;
     document.getElementById('modalLiderTitle').textContent='Editar Líder';
   },50);
 }
