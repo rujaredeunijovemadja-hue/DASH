@@ -464,10 +464,6 @@ td.mono { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight
       <div class="nav-item" onclick="navigate('config',this)">
         <span class="nav-icon">⚙️</span> Configurações
       </div>
-      <div class="nav-section-label">Acesso Público</div>
-      <div class="nav-item" onclick="window.open('https://ruja-app.lovable.app/','_blank')" style="background:rgba(212,43,43,0.08);border:1px solid rgba(212,43,43,0.2);margin:4px 8px;border-radius:8px;">
-        <span class="nav-icon">🌐</span> <span style="color:var(--red);font-weight:600">RUJA Web</span>
-      </div>
     </nav>
     <div class="sidebar-footer">
       <div class="user-badge">
@@ -489,6 +485,11 @@ td.mono { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight
         <div class="page-subtitle" id="pageSubtitle">Visão geral dos jovens</div>
       </div>
       <div class="topbar-right">
+        <div id="syncBadgeTop" style="font-size:11px;font-weight:600;color:#6B7280;display:flex;align-items:center;gap:6px;cursor:default" title="Status da sincronização"></div>
+        <button class="btn btn-sm" id="btnSyncManual" onclick="syncManual()" title="Salvar alterações na planilha"
+          style="background:rgba(59,130,246,0.12);color:#3B82F6;border:1px solid rgba(59,130,246,0.3);display:flex;align-items:center;gap:6px;font-weight:600">
+          ☁️ Salvar
+        </button>
         <button class="btn btn-primary" id="topAddBtn" onclick="handleAddBtn()">+ Novo</button>
       </div>
     </div>
@@ -753,7 +754,7 @@ td.mono { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight
             <div style="font-size:11px;color:var(--text3);margin-top:6px">Todos os dados sincronizam automaticamente entre os líderes.</div>
           </div>
           <div style="display:flex;gap:10px;margin-top:4px">
-            <button class="btn btn-ghost btn-sm" onclick="pullFromSheets().then(()=>{renderAll();showToast('Dados atualizados!')}).catch(()=>showToast('Erro ao puxar dados'))">⬇️ Puxar agora</button>
+            <button class="btn btn-ghost btn-sm" onclick="pullFromSheets().then(()=>{renderAll();showToast('Dados atualizados!')})">⬇️ Puxar agora</button>
             <button class="btn btn-ghost btn-sm" onclick="pushToSheets()">⬆️ Enviar agora</button>
           </div>
         </div>
@@ -795,6 +796,48 @@ td.mono { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight
             <button class="btn btn-primary" style="margin-top:16px;width:100%" onclick="saveRegras()">Salvar Regras</button>
           </div>
         </div>
+        <div class="card" style="margin-bottom:20px">
+          <div class="card-header"><span class="card-title">📂 Importar / Exportar CSV</span></div>
+          <div style="font-size:12px;color:var(--text2);margin-bottom:16px">
+            Exporte os dados para CSV ou importe de uma planilha existente. Ao importar, os dados são <strong>mesclados</strong> (não apaga os existentes).
+          </div>
+
+          <!-- EXPORTAR -->
+          <div style="margin-bottom:18px">
+            <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px">⬇️ Exportar</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button class="btn btn-ghost btn-sm" onclick="exportCSV('jovens')">👥 Jovens</button>
+              <button class="btn btn-ghost btn-sm" onclick="exportCSV('lideres')">⭐ Líderes</button>
+              <button class="btn btn-ghost btn-sm" onclick="exportCSV('departamentos')">🏛️ Departamentos</button>
+              <button class="btn btn-ghost btn-sm" onclick="exportCSV('frequencias')">📅 Frequências</button>
+              <button class="btn btn-ghost btn-sm" onclick="exportCSV('atividades')">🎯 Atividades</button>
+              <button class="btn btn-primary btn-sm" onclick="exportCSVTudo()">📦 Exportar Tudo</button>
+            </div>
+          </div>
+
+          <!-- IMPORTAR -->
+          <div>
+            <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px">⬆️ Importar CSV</div>
+            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+              <select id="csvImportTipo" class="form-input" style="width:180px;padding:8px 12px">
+                <option value="jovens">👥 Jovens</option>
+                <option value="lideres">⭐ Líderes</option>
+                <option value="departamentos">🏛️ Departamentos</option>
+                <option value="frequencias">📅 Frequências</option>
+                <option value="atividades">🎯 Atividades</option>
+              </select>
+              <label class="btn btn-ghost btn-sm" style="cursor:pointer">
+                📁 Escolher arquivo
+                <input type="file" accept=".csv" style="display:none" onchange="importCSV(this)">
+              </label>
+              <span id="csvImportStatus" style="font-size:12px;color:var(--text2)"></span>
+            </div>
+            <div style="font-size:11px;color:var(--text3);margin-top:8px">
+              💡 O CSV deve ter cabeçalho na primeira linha com os mesmos nomes dos campos exportados.
+            </div>
+          </div>
+        </div>
+
         <div class="card">
             <div class="card-header"><span class="card-title">Sobre o Sistema</span></div>
             <div style="font-size:13px;color:var(--text2);line-height:1.8">
@@ -970,7 +1013,7 @@ td.mono { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight
     <div class="form-row">
       <div class="form-group">
         <label class="form-label">🎂 Data de Nascimento</label>
-        <input type="date" class="form-input" id="jDataNasc" oninput="(function(){const d=document.getElementById('jDataNasc').value;if(d){const hoje=new Date(),nasc=new Date(d);let a=hoje.getFullYear()-nasc.getFullYear();const m=hoje.getMonth()-nasc.getMonth();if(m<0||(m===0&&hoje.getDate()<nasc.getDate()))a--;document.getElementById('jIdade').value=a;document.getElementById('jIdade').readOnly=true;}else{document.getElementById('jIdade').readOnly=false;}})()">
+        <input type="date" class="form-input" id="jDataNasc">
       </div>
       <div class="form-group" style="display:flex;align-items:flex-end">
         <div style="font-size:11px;color:var(--text3)">Necessário para os alertas de aniversário</div>
@@ -1152,12 +1195,6 @@ td.mono { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight
         <input type="text" class="form-input" id="lFuncao" placeholder="Ex: Líder de Mídia">
       </div>
     </div>
-    <div class="form-row">
-      <div class="form-group" style="flex-direction:row;align-items:center;gap:10px;padding:10px 14px;background:var(--card2);border-radius:8px;border:1px solid var(--border)">
-        <input type="checkbox" id="lSupremo" style="width:18px;height:18px;accent-color:var(--red);cursor:pointer">
-        <label for="lSupremo" style="cursor:pointer;font-size:14px">🦁 <strong>Líder Supremo da RUJA</strong> — aparece como "Líder RUJA" nos jovens</label>
-      </div>
-    </div>
     <div class="form-footer">
       <button class="btn btn-ghost" onclick="closeModal('modalLider')">Cancelar</button>
       <button class="btn btn-primary" onclick="saveLider()">Salvar</button>
@@ -1175,18 +1212,19 @@ const GAS_URL_DEFAULT = 'https://script.google.com/macros/s/AKfycbybKnnsOLHFjh_f
 if (!localStorage.getItem('gasUrl')) localStorage.setItem('gasUrl', GAS_URL_DEFAULT);
 const GAS_URL = localStorage.getItem('gasUrl') || GAS_URL_DEFAULT;
 let syncTimer = null, syncPending = false;
-let autoSyncInterval = null; // intervalo de push automático a cada 1 min
+let autoSyncInterval = null;
 
-function schedulePush() { if(!GAS_URL) return; clearTimeout(syncTimer); syncTimer = setTimeout(pushToSheets, 2000); }
+// Push desativado — apenas manual via botão nas Configurações
+function schedulePush() { /* push automático desativado */ }
 
-// Inicia o ciclo: pull a cada 1 minuto (push apenas quando usuário salva)
 function iniciarAutoSync() {
   if(!GAS_URL) return;
   pararAutoSync();
+  pullFromSheets(); // apenas pull ao fazer login
   autoSyncInterval = setInterval(() => {
-    pullFromSheets().then(() => renderAll());
-  }, 60 * 1000);
-  console.log('🔄 AutoSync iniciado — pull a cada 1 min');
+    pullFromSheets(); // pull a cada 2 minutos para manter atualizado
+  }, 2 * 60 * 1000);
+  console.log('🔄 AutoSync iniciado — pull a cada 2 min');
 }
 
 // Para o ciclo ao fazer logout
@@ -1199,53 +1237,75 @@ function pararAutoSync() {
 async function pushToSheets() {
   if(!GAS_URL||syncPending) return; syncPending=true; showSyncBadge('syncing');
   try {
-    await fetch(GAS_URL, {
-      method:'POST',
-      headers:{'Content-Type':'text/plain'},
-      mode:'no-cors',
-      body: JSON.stringify({
-        action:'push',
-        jovens, frequencias, recuperacoes, departamentos, lideres,
-        historicoMensal, metas, regras, atividades,
-        usuario: document.getElementById('userName')?.textContent || 'Dashboard',
-      })
-    });
-    // no-cors não retorna body — assumimos sucesso se não lançar exceção
-    showSyncBadge('ok');
+    const r = await fetch(GAS_URL, { method:'POST', body: JSON.stringify({
+      action:'push',
+      jovens, frequencias, recuperacoes, departamentos, lideres,
+      historicoMensal, metas, regras, atividades,
+      usuario: document.getElementById('userName')?.textContent || 'Dashboard',
+    }) });
+    const d = await r.json(); showSyncBadge(d.ok?'ok':'error');
   } catch(e) { showSyncBadge('error'); } finally { syncPending=false; }
 }
-function pullFromSheets() {
-  if(!GAS_URL) return Promise.resolve();
-  showSyncBadge('syncing');
-  return new Promise((resolve, reject) => {
-    const cbName = '_rujaCallback_' + Date.now();
-    const script = document.createElement('script');
-    const timer = setTimeout(() => {
-      delete window[cbName]; document.body.removeChild(script);
-      showSyncBadge('offline'); reject(new Error('timeout'));
-    }, 15000);
-    window[cbName] = function(d) {
-      clearTimeout(timer); delete window[cbName]; document.body.removeChild(script);
-      if(d.jovens)          { jovens=d.jovens;                       localStorage.setItem('jovens',JSON.stringify(jovens)); }
-      if(d.frequencias)     { frequencias=d.frequencias;             localStorage.setItem('frequencias',JSON.stringify(frequencias)); }
-      if(d.recuperacoes)    { recuperacoes=d.recuperacoes;           localStorage.setItem('recuperacoes',JSON.stringify(recuperacoes)); }
-      if(d.departamentos)   { departamentos=d.departamentos;         localStorage.setItem('departamentos',JSON.stringify(departamentos)); }
-      if(d.lideres)         { lideres=d.lideres;                     localStorage.setItem('lideres',JSON.stringify(lideres)); }
-      if(d.historicoMensal) { historicoMensal=d.historicoMensal;     localStorage.setItem('historicoMensal',JSON.stringify(historicoMensal)); }
-      if(d.metas)           { metas=d.metas;                         localStorage.setItem('metas',JSON.stringify(metas)); }
-      if(d.regras)          { regras=d.regras;                       localStorage.setItem('regras',JSON.stringify(regras)); }
-      if(d.atividades)      { atividades=d.atividades;               localStorage.setItem('atividades',JSON.stringify(atividades)); }
-      showSyncBadge('ok'); resolve();
-    };
-    script.src = GAS_URL + '?callback=' + cbName;
-    script.onerror = () => { clearTimeout(timer); delete window[cbName]; showSyncBadge('offline'); reject(); };
-    document.body.appendChild(script);
-  });
+async function pullFromSheets() {
+  if(!GAS_URL) return; showSyncBadge('syncing');
+  try {
+    const r = await fetch(GAS_URL+'?action=pull'); const d = await r.json();
+    if(d.jovens)          { jovens=d.jovens;                       localStorage.setItem('jovens',JSON.stringify(jovens)); }
+    if(d.frequencias)     { frequencias=d.frequencias;             localStorage.setItem('frequencias',JSON.stringify(frequencias)); }
+    if(d.recuperacoes)    { recuperacoes=d.recuperacoes;           localStorage.setItem('recuperacoes',JSON.stringify(recuperacoes)); }
+    if(d.departamentos)   { departamentos=d.departamentos;         localStorage.setItem('departamentos',JSON.stringify(departamentos)); }
+    if(d.lideres)         { lideres=d.lideres;                     localStorage.setItem('lideres',JSON.stringify(lideres)); }
+    if(d.historicoMensal) { historicoMensal=d.historicoMensal;     localStorage.setItem('historicoMensal',JSON.stringify(historicoMensal)); }
+    if(d.metas)           { metas=d.metas;                         localStorage.setItem('metas',JSON.stringify(metas)); }
+    if(d.regras)          { regras=d.regras;                       localStorage.setItem('regras',JSON.stringify(regras)); }
+    if(d.atividades)      { atividades=d.atividades;               localStorage.setItem('atividades',JSON.stringify(atividades)); }
+    showSyncBadge('ok');
+  } catch(e) { showSyncBadge('offline'); }
 }
 function showSyncBadge(s) {
-  const b=document.getElementById('syncBadge'); if(!b) return;
-  const m={ok:{t:'☁️ Sincronizado',c:'#22C55E'},syncing:{t:'🔄 Sincronizando…',c:'#F59E0B'},error:{t:'⚠️ Erro',c:'#EF4444'},offline:{t:'📴 Offline',c:'#6B7280'}};
-  const x=m[s]||m.ok; b.textContent=x.t; b.style.color=x.c;
+  const m = {
+    ok:      { t:'☁️ Sincronizado',  c:'#22C55E' },
+    syncing: { t:'🔄 Salvando…',     c:'#F59E0B' },
+    error:   { t:'⚠️ Erro',          c:'#EF4444' },
+    offline: { t:'📴 Offline',       c:'#6B7280'  },
+  };
+  const x = m[s] || m.ok;
+  // Badge na topbar (sempre visível)
+  const top = document.getElementById('syncBadgeTop');
+  if(top) { top.textContent = x.t; top.style.color = x.c; }
+  // Badge na aba Config
+  const cfg = document.getElementById('syncBadge');
+  if(cfg) { cfg.textContent = x.t; cfg.style.color = x.c; }
+  // Botão de salvar — feedback visual
+  const btn = document.getElementById('btnSyncManual');
+  if(btn) {
+    if(s === 'syncing') {
+      btn.textContent = '🔄 Salvando…'; btn.disabled = true;
+      btn.style.opacity = '0.6';
+    } else if(s === 'ok') {
+      btn.textContent = '✅ Salvo!'; btn.disabled = false;
+      btn.style.opacity = '1';
+      setTimeout(() => { btn.textContent = '☁️ Salvar'; }, 2500);
+    } else {
+      btn.textContent = '☁️ Salvar'; btn.disabled = false;
+      btn.style.opacity = '1';
+    }
+  }
+}
+
+async function syncManual() {
+  if(syncPending) return;
+  showSyncBadge('syncing');
+  try {
+    const r = await fetch(GAS_URL, { method:'POST', body: JSON.stringify({
+      action:'push',
+      jovens, frequencias, recuperacoes, departamentos, lideres,
+      historicoMensal, metas, regras, atividades,
+      usuario: document.getElementById('userName')?.textContent || 'Dashboard',
+    }) });
+    const d = await r.json();
+    showSyncBadge(d.ok ? 'ok' : 'error');
+  } catch(e) { showSyncBadge('error'); }
 }
 function saveGasUrl() {
   const u=document.getElementById('gasUrlInput').value.trim();
@@ -1256,56 +1316,16 @@ function saveGasUrl() {
 // ═══════════════════════════════════════════════
 // DATA STORE
 // ═══════════════════════════════════════════════
-let jovens = JSON.parse(localStorage.getItem('jovens')||'null') || [
-  { id:1, nome:'Ana Beatriz Silva', idade:19, contato:'(21) 98765-4321', instagram:'@anabeatriz', endereco:'Rua das Flores, 12, Méier, RJ', departamento:'Mídia', lider:'João Pedro', status:'Ativo', entrada:'2024-01-15', obs:'Engajada + ativa nas redes + continuar incentivando' },
-  { id:2, nome:'Carlos Eduardo Santos', idade:22, contato:'(21) 97654-3210', instagram:'@carlos.edu', endereco:'Av. Brasil, 200, Penha, RJ', departamento:'Louvor', lider:'Maria José', status:'Ativo', entrada:'2023-08-10', obs:'Toca violão + muito comprometido' },
-  { id:3, nome:'Fernanda Lima', idade:17, contato:'(21) 96543-2109', instagram:'@fer.lima', endereco:'Rua Alegria, 45, Tijuca, RJ', departamento:'', lider:'João Pedro', status:'Oscilando', entrada:'2024-03-20', obs:'Tímida + falta de integração + inserir em grupo pequeno' },
-  { id:4, nome:'Rafael Oliveira', idade:24, contato:'(21) 95432-1098', instagram:'@rafaoliv', endereco:'Rua Nova, 78, Madureira, RJ', departamento:'Organização', lider:'Maria José', status:'Ocioso', entrada:'2023-05-05', obs:'Trabalho + interesse em mídia + realocar' },
-  { id:5, nome:'Juliana Costa', idade:20, contato:'(21) 94321-0987', instagram:'@ju.costa', endereco:'Trav. São João, 3, Rocha, RJ', departamento:'', lider:'', status:'Em Risco', entrada:'2023-11-01', obs:'Sem contato há 3 semanas + problemas familiares + contato urgente' },
-  { id:6, nome:'Lucas Pereira', idade:18, contato:'(21) 93210-9876', instagram:'@lucas.p', endereco:'Rua Bela Vista, 90, Irajá, RJ', departamento:'Mídia', lider:'João Pedro', status:'Ativo', entrada:'2024-06-01', obs:'Novo + empolgado + integrar bem' },
-];
-
-let frequencias = JSON.parse(localStorage.getItem('frequencias')||'null') || [
-  { id:1, jovemId:1, data:'2025-04-13', evento:'Culto Domingo', presenca:'presente', obs:'' },
-  { id:2, jovemId:2, data:'2025-04-13', evento:'Culto Domingo', presenca:'presente', obs:'' },
-  { id:3, jovemId:3, data:'2025-04-13', evento:'Culto Domingo', presenca:'falta', obs:'' },
-  { id:4, jovemId:4, data:'2025-04-06', evento:'Culto Domingo', presenca:'falta', obs:'' },
-  { id:5, jovemId:5, data:'2025-03-30', evento:'Culto Domingo', presenca:'falta', obs:'Último registro' },
-  { id:6, jovemId:6, data:'2025-04-13', evento:'Culto Domingo', presenca:'presente', obs:'' },
-];
-
-let recuperacoes = JSON.parse(localStorage.getItem('recuperacoes')||'null') || [
-  { id:1, jovemId:5, responsavel:'João Pedro', etapa:'1 — Contato via WhatsApp', motivo:'Pessoal / Família', acao:'Ligar hoje à noite', obs:'Sem resposta no whats', status:'Em andamento' },
-];
-
-let departamentos = JSON.parse(localStorage.getItem('departamentos')||'null') || [
-  { id:1, nome:'Mídia', icone:'🎬', lider:'João Pedro', capacidade:10, desc:'Comunicação e redes sociais' },
-  { id:2, nome:'Louvor', icone:'🎵', lider:'Maria José', capacidade:15, desc:'Música e adoração' },
-  { id:3, nome:'Organização', icone:'📋', lider:'Maria José', capacidade:8, desc:'Logística e eventos' },
-  { id:4, nome:'Intercessão', icone:'🙏', lider:'', capacidade:12, desc:'Oração e intercessão' },
-];
-
-let lideres = JSON.parse(localStorage.getItem('lideres')||'null') || [
-  { id:1, nome:'João Pedro', contato:'(21) 99111-2233', departamento:'Mídia', funcao:'Líder de Mídia' },
-  { id:2, nome:'Maria José', contato:'(21) 99444-5566', departamento:'Louvor', funcao:'Líder de Louvor' },
-];
-
-let regras = JSON.parse(localStorage.getItem('regras')||'null') || { ativo:75, oscilando:40, risco:3 };
-
-// Atividades & Eventos
-let atividades = JSON.parse(localStorage.getItem('atividades')||'null') || [
-  { id:1, titulo:'Culto de Jovens', tipo:'culto', data:'2025-04-27', horario:'19:00', local:'Igreja Central', responsavel:'', departamento:'', hierarquia:'ministerio', status:'aprovado', desc:'Culto mensal da RUJA' },
-  { id:2, titulo:'Reunião de Líderes', tipo:'reuniao', data:'2025-04-25', horario:'18:00', local:'Sala de reuniões', responsavel:'', departamento:'', hierarquia:'ministerio', status:'aprovado', desc:'Planejamento mensal' },
-  { id:3, titulo:'Retiro da Juventude', tipo:'retiro', data:'2025-05-10', horario:'08:00', local:'Sítio Esperança', responsavel:'', departamento:'', hierarquia:'ministerio', status:'pendente', desc:'Retiro semestral' },
-];
-
-// Metas customizáveis
-let metas = JSON.parse(localStorage.getItem('metas')||'null') || {
-  ativosDepto: 20,      // meta: ativos em departamento
-  batizadosDepto: 10,   // meta: batizados ativos em departamento
-};
-
-// Histórico mensal de snapshots (gravado automaticamente ao salvar)
+// DATA STORE — carregado do localStorage ou vazio (dados reais vêm da planilha via pull)
+// ═══════════════════════════════════════════════
+let jovens        = JSON.parse(localStorage.getItem('jovens')||'null') || [];
+let frequencias   = JSON.parse(localStorage.getItem('frequencias')||'null') || [];
+let recuperacoes  = JSON.parse(localStorage.getItem('recuperacoes')||'null') || [];
+let departamentos = JSON.parse(localStorage.getItem('departamentos')||'null') || [];
+let lideres       = JSON.parse(localStorage.getItem('lideres')||'null') || [];
+let regras        = JSON.parse(localStorage.getItem('regras')||'null') || { ativo:75, oscilando:40, risco:3 };
+let atividades    = JSON.parse(localStorage.getItem('atividades')||'null') || [];
+let metas         = JSON.parse(localStorage.getItem('metas')||'null') || { ativosDepto:20, batizadosDepto:10 };
 let historicoMensal = JSON.parse(localStorage.getItem('historicoMensal')||'null') || [];
 
 // ═══════════════════════════════════════════════
@@ -1389,9 +1409,7 @@ function gravarSnapshotMensal() {
 function saveMetas() {
   metas.ativosDepto    = parseInt(document.getElementById('metaAtivosDepto').value)||20;
   metas.batizadosDepto = parseInt(document.getElementById('metaBatizadosDepto').value)||10;
-  localStorage.setItem('metas',JSON.stringify(metas));
-  clearTimeout(syncTimer);
-  pushToSheets();
+  saveData();
   showToast('Metas salvas!');
   if(currentPage==='metas') renderMetas();
 }
@@ -1807,7 +1825,6 @@ function getMsgAtividade(a, tipo) {
       `✔️ Aprovado por: *${quem}*\n` +
       `🕐 Em: ${quando}\n\n` +
       `_Contamos com a presença de todos!_ 🙌\n` +
-      `🌐 Acompanhe: https://ruja-app.lovable.app/\n` +
       `🦁 *RUJA — Rede UniJovem ADJA*`;
   } else {
     const quem    = a.canceladoPor || 'Liderança';
@@ -1821,7 +1838,6 @@ function getMsgAtividade(a, tipo) {
       `✖️ Cancelado por: *${quem}*\n` +
       `🕐 Em: ${quando}\n\n` +
       `_Em breve novas informações. Fiquem atentos!_ 🙏\n` +
-      `🌐 Acompanhe: https://ruja-app.lovable.app/\n` +
       `🦁 *RUJA — Rede UniJovem ADJA*`;
   }
 }
@@ -1844,6 +1860,135 @@ function copiarMsgAtividade(id, tipo) {
       document.body.removeChild(ta); showToast('Mensagem copiada!');
     });
 }
+// ══════════════════════════════════════════════════════════════════════════════
+// CSV — EXPORTAR / IMPORTAR
+// ══════════════════════════════════════════════════════════════════════════════
+const CSV_DATASETS = {
+  jovens:        () => jovens,
+  lideres:       () => lideres,
+  departamentos: () => departamentos,
+  frequencias:   () => frequencias,
+  atividades:    () => atividades,
+};
+
+function csvEscape(v) {
+  if(v === null || v === undefined) return '';
+  const s = String(v);
+  return s.includes(',') || s.includes('"') || s.includes('\n')
+    ? `"${s.replace(/"/g,'""')}"`
+    : s;
+}
+
+function arrayToCSV(data) {
+  if(!data || !data.length) return '';
+  const headers = Object.keys(data[0]);
+  const rows = data.map(r => headers.map(h => csvEscape(r[h])).join(','));
+  return [headers.join(','), ...rows].join('\n');
+}
+
+function downloadCSV(filename, csv) {
+  const bom = '\uFEFF'; // UTF-8 BOM para abrir certo no Excel
+  const blob = new Blob([bom + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a); URL.revokeObjectURL(url);
+}
+
+function exportCSV(tipo) {
+  const data = CSV_DATASETS[tipo]?.();
+  if(!data || !data.length) { showToast('Nenhum dado para exportar'); return; }
+  const csv = arrayToCSV(data);
+  const hoje = new Date().toISOString().slice(0,10);
+  downloadCSV(`RUJA_${tipo}_${hoje}.csv`, csv);
+  showToast(`✅ ${tipo}.csv exportado!`);
+}
+
+function exportCSVTudo() {
+  const hoje = new Date().toISOString().slice(0,10);
+  Object.entries(CSV_DATASETS).forEach(([tipo, fn]) => {
+    const data = fn();
+    if(data && data.length) downloadCSV(`RUJA_${tipo}_${hoje}.csv`, arrayToCSV(data));
+  });
+  showToast('📦 Todos os CSVs exportados!');
+}
+
+function csvToArray(text) {
+  const lines = text.trim().split('\n');
+  if(lines.length < 2) return [];
+  const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g,''));
+  return lines.slice(1).map(line => {
+    // Suporte a campos com vírgula entre aspas
+    const vals = []; let cur = ''; let inQ = false;
+    for(let i=0; i<line.length; i++) {
+      const c = line[i];
+      if(c==='"') { inQ=!inQ; }
+      else if(c===',' && !inQ) { vals.push(cur.replace(/^"|"$/g,'').replace(/""/g,'"')); cur=''; }
+      else { cur+=c; }
+    }
+    vals.push(cur.replace(/^"|"$/g,'').replace(/""/g,'"'));
+    const obj = {};
+    headers.forEach((h,i) => { obj[h] = vals[i] !== undefined ? vals[i] : ''; });
+    return obj;
+  });
+}
+
+function importCSV(input) {
+  const file = input.files[0]; if(!file) return;
+  const tipo = document.getElementById('csvImportTipo').value;
+  const status = document.getElementById('csvImportStatus');
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const rows = csvToArray(e.target.result);
+      if(!rows.length) { status.textContent = '⚠️ Arquivo vazio ou inválido'; return; }
+
+      // Gera IDs únicos para registros importados
+      const maxId = (arr) => arr.reduce((m,x) => Math.max(m, Number(x.id)||0), 0);
+
+      if(tipo === 'jovens') {
+        let nextId = maxId(jovens) + 1;
+        rows.forEach(r => { if(!r.id) r.id = nextId++; });
+        const existIds = new Set(jovens.map(j=>String(j.id)));
+        const novos = rows.filter(r => !existIds.has(String(r.id)));
+        jovens = [...jovens, ...novos];
+      } else if(tipo === 'lideres') {
+        let nextId = maxId(lideres) + 1;
+        rows.forEach(r => { if(!r.id) r.id = nextId++; });
+        const existIds = new Set(lideres.map(j=>String(j.id)));
+        lideres = [...lideres, ...rows.filter(r => !existIds.has(String(r.id)))];
+      } else if(tipo === 'departamentos') {
+        let nextId = maxId(departamentos) + 1;
+        rows.forEach(r => { if(!r.id) r.id = nextId++; });
+        const existIds = new Set(departamentos.map(j=>String(j.id)));
+        departamentos = [...departamentos, ...rows.filter(r => !existIds.has(String(r.id)))];
+      } else if(tipo === 'frequencias') {
+        let nextId = maxId(frequencias) + 1;
+        rows.forEach(r => { if(!r.id) r.id = nextId++; });
+        const existIds = new Set(frequencias.map(j=>String(j.id)));
+        frequencias = [...frequencias, ...rows.filter(r => !existIds.has(String(r.id)))];
+      } else if(tipo === 'atividades') {
+        let nextId = maxId(atividades) + 1;
+        rows.forEach(r => { if(!r.id) r.id = nextId++; });
+        const existIds = new Set(atividades.map(j=>String(j.id)));
+        atividades = [...atividades, ...rows.filter(r => !existIds.has(String(r.id)))];
+      }
+
+      saveData(); renderAll();
+      status.style.color = 'var(--green)';
+      status.textContent = `✅ ${rows.length} registros importados!`;
+      showToast(`✅ ${rows.length} registros de ${tipo} importados!`);
+      input.value = '';
+    } catch(err) {
+      status.style.color = 'var(--red)';
+      status.textContent = '❌ Erro ao ler CSV: ' + err.message;
+    }
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+
+
 function deleteAtiv(id) {
   if(!confirm('Excluir esta atividade?')) return;
   atividades=atividades.filter(a=>a.id!==id);
@@ -2070,7 +2215,7 @@ function openModal(id) {
   const jovemOpts = jovens.map(j=>`<option value="${j.id}">${j.nome}</option>`).join('');
   ['fJovem','rJovem'].forEach(sid=>{ try{ document.getElementById(sid).innerHTML=jovemOpts; }catch(e){} });
   // Preenche selects de líderes
-  const liderOpts = ['<option value="">Sem líder</option>',...lideres.map(l=>`<option value="${l.supremo?'Líder RUJA':l.nome}">${l.supremo?'🦁 Líder RUJA':l.nome}</option>`)].join('');
+  const liderOpts = ['<option value="">Sem líder</option>',...lideres.map(l=>`<option value="${l.nome}">${l.nome}</option>`)].join('');
   ['jLider','rResponsavel'].forEach(sid=>{ try{ document.getElementById(sid).innerHTML=liderOpts; }catch(e){} });
   // Preenche selects de departamentos
   const deptoOpts = ['<option value="">Sem departamento</option>',...departamentos.map(d=>`<option value="${d.nome}">${d.icone||''} ${d.nome}</option>`)].join('');
@@ -2089,9 +2234,6 @@ function closeModal(id) {
   document.getElementById('modalDeptoTitle').textContent='Novo Departamento';
   document.getElementById('modalLiderTitle').textContent='Novo Líder';
   try{ document.getElementById('modalAtivTitle').textContent='Nova Atividade'; }catch(e){}
-  // Reset campos ao fechar
-  try{ document.getElementById('jIdade').readOnly=false; document.getElementById('jDataNasc').value=''; }catch(e){}
-  try{ document.getElementById('lSupremo').checked=false; }catch(e){}
 }
 document.querySelectorAll('.modal-backdrop').forEach(b=>{
   b.addEventListener('click',e=>{ if(e.target===b) b.classList.remove('open'); });
@@ -2564,8 +2706,6 @@ function saveRegras() {
   regras.oscilando=parseInt(document.getElementById('regOscilando').value)||40;
   regras.risco=parseInt(document.getElementById('regRisco').value)||3;
   localStorage.setItem('regras',JSON.stringify(regras));
-  clearTimeout(syncTimer);
-  pushToSheets();
   showToast('Regras salvas!');
 }
 
@@ -2573,17 +2713,9 @@ function saveRegras() {
 // CRUD — JOVENS
 // ═══════════════════════════════════════════════
 function saveJovem() {
-  const dataNascVal = document.getElementById('jDataNasc').value;
-  const idadeCalc = dataNascVal ? (()=>{
-    const hoje=new Date(), nasc=new Date(dataNascVal);
-    let age=hoje.getFullYear()-nasc.getFullYear();
-    const m=hoje.getMonth()-nasc.getMonth();
-    if(m<0||(m===0&&hoje.getDate()<nasc.getDate())) age--;
-    return age;
-  })() : (parseInt(document.getElementById('jIdade').value)||null);
   const val={
     nome:document.getElementById('jNome').value.trim(),
-    idade:idadeCalc,
+    idade:parseInt(document.getElementById('jIdade').value)||null,
     contato:document.getElementById('jContato').value.trim(),
     instagram:document.getElementById('jInstagram').value.trim(),
     endereco:document.getElementById('jEndereco').value.trim(),
@@ -2681,26 +2813,9 @@ function deleteRecup(id) {
 function saveDepto() {
   const val={ nome:document.getElementById('dNome').value.trim(), icone:document.getElementById('dIcone').value.trim(), lider:document.getElementById('dLider').value, capacidade:parseInt(document.getElementById('dCapacidade').value)||20, desc:document.getElementById('dDesc').value.trim() };
   if(!val.nome) return alert('Preencha o nome.');
-
-  // Nome antigo do departamento (para atualizar jovens que já estavam nele)
-  const nomeAntigo = editingDeptoId ? (departamentos.find(d=>d.id===editingDeptoId)||{}).nome : val.nome;
-
   if(editingDeptoId) { const i=departamentos.findIndex(d=>d.id===editingDeptoId); if(i!==-1) departamentos[i]={...departamentos[i],...val}; }
   else { val.id=Date.now(); departamentos.push(val); }
-
-  // Atualiza líder de todos os jovens do departamento
-  if(val.lider) {
-    const liderObj = lideres.find(l => l.nome === val.lider || (l.supremo && 'Líder RUJA' === val.lider));
-    const nomeExibido = liderObj?.supremo ? 'Líder RUJA' : val.lider;
-    jovens.forEach(j => {
-      if(j.departamento === nomeAntigo || j.departamento === val.nome) {
-        j.departamento = val.nome; // atualiza nome se mudou
-        j.lider = nomeExibido;
-      }
-    });
-  }
-
-  saveData(); closeModal('modalDepto'); showToast('Departamento salvo!'); renderDepartamentos(); renderJovens();
+  saveData(); closeModal('modalDepto'); showToast('Departamento salvo!'); renderDepartamentos();
 }
 function editDepto(id) {
   const d=departamentos.find(x=>x.id===id); if(!d) return;
@@ -2725,30 +2840,11 @@ function deleteDepto(id) {
 // CRUD — LÍDERES
 // ═══════════════════════════════════════════════
 function saveLider() {
-  const val={
-    nome:       document.getElementById('lNome').value.trim(),
-    contato:    document.getElementById('lContato').value.trim(),
-    departamento: document.getElementById('lDepartamento').value,
-    funcao:     document.getElementById('lFuncao').value.trim(),
-    supremo:    document.getElementById('lSupremo').checked,
-  };
+  const val={ nome:document.getElementById('lNome').value.trim(), contato:document.getElementById('lContato').value.trim(), departamento:document.getElementById('lDepartamento').value, funcao:document.getElementById('lFuncao').value.trim() };
   if(!val.nome||!val.contato) return alert('Preencha Nome e WhatsApp.');
-
-  // Se marcado como supremo, desmarca os outros
-  if(val.supremo) lideres.forEach(l => { if(l.id!==editingLiderId) l.supremo=false; });
-
   if(editingLiderId) { const i=lideres.findIndex(l=>l.id===editingLiderId); if(i!==-1) lideres[i]={...lideres[i],...val}; }
   else { val.id=Date.now(); lideres.push(val); }
-
-  // Atualiza todos os jovens do departamento com este líder
-  if(val.departamento) {
-    const nomeExibido = val.supremo ? 'Líder RUJA' : val.nome;
-    jovens.forEach(j => {
-      if(j.departamento === val.departamento) j.lider = nomeExibido;
-    });
-  }
-
-  saveData(); closeModal('modalLider'); showToast('Líder salvo!'); renderLideres(); renderJovens();
+  saveData(); closeModal('modalLider'); showToast('Líder salvo!'); renderLideres();
 }
 function editLider(id) {
   const l=lideres.find(x=>x.id===id); if(!l) return;
@@ -2759,7 +2855,6 @@ function editLider(id) {
     document.getElementById('lContato').value=l.contato;
     document.getElementById('lDepartamento').value=l.departamento||'';
     document.getElementById('lFuncao').value=l.funcao||'';
-    document.getElementById('lSupremo').checked=l.supremo||false;
     document.getElementById('modalLiderTitle').textContent='Editar Líder';
   },50);
 }
