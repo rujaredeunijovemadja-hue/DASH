@@ -3104,16 +3104,12 @@ function saveDepto() {
   if(val.lider && val.lider !== liderAntigo) {
     // Novo líder definido — atualiza jovens do depto
     const n = sincronizarLiderNosJovens(val.nome, val.lider, liderAntigo);
-    // Garante que o líder também está cadastrado na tabela de líderes
+    // Atualiza o departamento do líder já cadastrado (NÃO cria automaticamente)
     const jaCadastrado = lideres.find(l => l.nome === val.lider);
-    if(!jaCadastrado) {
-      // Cria registro automático mínimo do líder
-      lideres.push({ id: Date.now()+1, nome: val.lider, contato: '', departamento: val.nome, funcao: '' });
-    } else if(jaCadastrado.departamento !== val.nome) {
-      // Atualiza o departamento do líder já cadastrado
+    if(jaCadastrado && jaCadastrado.departamento !== val.nome) {
       jaCadastrado.departamento = val.nome;
     }
-    showToast(`Departamento salvo! ${n} jovem(ns) atualizados.`);
+    showToast(n > 0 ? `Departamento salvo! ${n} jovem(ns) atualizados.` : 'Departamento salvo!');
   } else if(!val.lider && liderAntigo) {
     // Líder removido — limpa nos jovens
     sincronizarLiderNosJovens(val.nome, '', liderAntigo);
