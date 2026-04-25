@@ -754,7 +754,8 @@ td.mono { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight
             <div style="font-size:11px;color:var(--text3);margin-top:6px">Todos os dados sincronizam automaticamente entre os líderes.</div>
           </div>
           <div style="display:flex;gap:10px;margin-top:4px">
-            <button class="btn btn-ghost btn-sm" onclick="pullFromSheets().then(()=>{renderAll();showToast('Dados atualizados!')})">⬇️ Puxar agora</button>
+            <button class="btn btn-ghost btn-sm" onclick="pullFromSheets(false).then(()=>{renderAll();showToast('Dados atualizados!')})">⬇️ Puxar agora</button>
+            <button class="btn btn-ghost btn-sm" onclick="pullFromSheets(true).then(()=>{renderAll();showToast('Dados puxados (forçado)!')})" title="Descarta alterações locais e força puxar da planilha">⚠️ Forçar pull</button>
             <button class="btn btn-ghost btn-sm" onclick="pushToSheets()">⬆️ Enviar agora</button>
           </div>
         </div>
@@ -1214,6 +1215,7 @@ if (!localStorage.getItem('gasUrl')) localStorage.setItem('gasUrl', GAS_URL_DEFA
 const GAS_URL = localStorage.getItem('gasUrl') || GAS_URL_DEFAULT;
 let syncTimer = null, syncPending = false;
 let autoSyncInterval = null;
+let dadosSujos = false; // true quando há alterações não sincronizadas
 
 // Push desativado — apenas manual via botão nas Configurações
 function schedulePush() { /* push automático desativado */ }
@@ -1247,8 +1249,19 @@ async function pushToSheets() {
     const d = await r.json(); showSyncBadge(d.ok?'ok':'error');
   } catch(e) { showSyncBadge('error'); } finally { syncPending=false; }
 }
-async function pullFromSheets() {
-  if(!GAS_URL) return; showSyncBadge('syncing');
+async function pullFromSheets(forcar=false) {
+  if(!GAS_URL) return;
+  // Protege dados não salvos — pergunta antes de sobrescrever
+  if(!forcar && dadosSujos) {
+    const ok = confirm(
+      '⚠️ Você tem alterações não sincronizadas!\n\n' +
+      'Se puxar agora os dados da planilha, as suas alterações locais serão perdidas.\n\n' +
+      'Clique OK para descartar suas alterações e puxar da planilha.\n' +
+      'Clique Cancelar para voltar e sincronizar primeiro (botão ☁️ Salvar).'
+    );
+    if(!ok) return;
+  }
+  showSyncBadge('syncing');
   try {
     const r = await fetch(GAS_URL+'?action=pull'); const d = await r.json();
     if(d.jovens)          { jovens=d.jovens;                       localStorage.setItem('jovens',JSON.stringify(jovens)); }
@@ -1260,9 +1273,35 @@ async function pullFromSheets() {
     if(d.metas)           { metas=d.metas;                         localStorage.setItem('metas',JSON.stringify(metas)); }
     if(d.regras)          { regras=d.regras;                       localStorage.setItem('regras',JSON.stringify(regras)); }
     if(d.atividades)      { atividades=d.atividades;               localStorage.setItem('atividades',JSON.stringify(atividades)); }
+    dadosSujos = false; limparAvisoPendente();
     showSyncBadge('ok');
   } catch(e) { showSyncBadge('offline'); }
 }
+function marcarDadosSujos() {
+  dadosSujos = true;
+  const btn = document.getElementById('btnSyncManual');
+  if(btn && !btn.disabled) {
+    btn.textContent = '🔴 Salvar agora';
+    btn.style.background = 'rgba(212,43,43,0.18)';
+    btn.style.color      = 'var(--red)';
+    btn.style.border     = '1px solid rgba(212,43,43,0.5)';
+  }
+  const top = document.getElementById('syncBadgeTop');
+  if(top) { top.textContent = '🔴 Não salvo'; top.style.color = 'var(--red)'; }
+  const cfg = document.getElementById('syncBadge');
+  if(cfg) { cfg.textContent = '🔴 Não salvo'; cfg.style.color = 'var(--red)'; }
+}
+
+function limparAvisoPendente() {
+  dadosSujos = false;
+  const btn = document.getElementById('btnSyncManual');
+  if(btn) {
+    btn.style.background = 'rgba(59,130,246,0.12)';
+    btn.style.color      = '#3B82F6';
+    btn.style.border     = '1px solid rgba(59,130,246,0.3)';
+  }
+}
+
 function showSyncBadge(s) {
   const m = {
     ok:      { t:'☁️ Sincronizado',  c:'#22C55E' },
@@ -1305,6 +1344,7 @@ async function syncManual() {
       usuario: document.getElementById('userName')?.textContent || 'Dashboard',
     }) });
     const d = await r.json();
+    if(d.ok) { dadosSujos = false; limparAvisoPendente(); }
     showSyncBadge(d.ok ? 'ok' : 'error');
   } catch(e) { showSyncBadge('error'); }
 }
@@ -1388,6 +1428,7 @@ function saveData() {
   localStorage.setItem('atividades',JSON.stringify(atividades));
   gravarSnapshotMensal();
   schedulePush();
+  marcarDadosSujos();
 }
 
 function gravarSnapshotMensal() {
