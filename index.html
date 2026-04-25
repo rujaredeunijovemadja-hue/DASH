@@ -1302,11 +1302,13 @@ function schedulePush() { /* push automático desativado */ }
 function iniciarAutoSync() {
   if(!GAS_URL) return;
   pararAutoSync();
-  pullFromSheets(); // apenas pull ao fazer login
+  pullFromSheets(); // pull ao fazer login (dados ainda limpos)
   autoSyncInterval = setInterval(() => {
-    pullFromSheets(); // pull a cada 2 minutos para manter atualizado
+    // Pull automático só roda se não há alterações locais pendentes
+    // Evita sobrescrever dados recém-salvos que ainda não foram ao Sheets
+    if(!dadosSujos) pullFromSheets(false, true); // silencioso
   }, 2 * 60 * 1000);
-  console.log('🔄 AutoSync iniciado — pull a cada 2 min');
+  console.log('🔄 AutoSync iniciado — pull a cada 2 min (somente se limpo)');
 }
 
 // Para o ciclo ao fazer logout
@@ -1328,19 +1330,24 @@ async function pushToSheets() {
     const d = await r.json(); showSyncBadge(d.ok?'ok':'error');
   } catch(e) { showSyncBadge('error'); } finally { syncPending=false; }
 }
-async function pullFromSheets(forcar=false) {
+async function pullFromSheets(forcar=false, silencioso=false) {
   if(!GAS_URL) return;
-  // Protege dados não salvos — pergunta antes de sobrescrever
-  if(!forcar && dadosSujos) {
+
+  // Pull automático (silencioso): NUNCA roda com dados sujos
+  if(silencioso && dadosSujos) return;
+
+  // Pull manual com dados não salvos: pergunta antes de sobrescrever
+  if(!forcar && !silencioso && dadosSujos) {
     const ok = confirm(
       '⚠️ Você tem alterações não sincronizadas!\n\n' +
-      'Se puxar agora os dados da planilha, as suas alterações locais serão perdidas.\n\n' +
-      'Clique OK para descartar suas alterações e puxar da planilha.\n' +
-      'Clique Cancelar para voltar e sincronizar primeiro (botão ☁️ Salvar).'
+      'Se puxar agora, suas alterações locais serão perdidas.\n\n' +
+      'OK = descartar e puxar da planilha\n' +
+      'Cancelar = voltar e clicar ☁️ Salvar primeiro.'
     );
     if(!ok) return;
   }
-  showSyncBadge('syncing');
+
+  if(!silencioso) showSyncBadge('syncing');
   try {
     const r = await fetch(GAS_URL+'?action=pull'); const d = await r.json();
     if(d.jovens)          { jovens=d.jovens;                       localStorage.setItem('jovens',JSON.stringify(jovens)); }
@@ -1352,10 +1359,11 @@ async function pullFromSheets(forcar=false) {
     if(d.metas)           { metas=d.metas;                         localStorage.setItem('metas',JSON.stringify(metas)); }
     if(d.regras)          { regras=d.regras;                       localStorage.setItem('regras',JSON.stringify(regras)); }
     if(d.atividades)      { atividades=d.atividades;               localStorage.setItem('atividades',JSON.stringify(atividades)); }
-    if(d.liderSupremo)    { liderSupremo=d.liderSupremo;             localStorage.setItem('liderSupremo',JSON.stringify(liderSupremo)); }
+    if(d.liderSupremo)    { liderSupremo=d.liderSupremo;           localStorage.setItem('liderSupremo',JSON.stringify(liderSupremo)); }
     dadosSujos = false; limparAvisoPendente();
-    showSyncBadge('ok');
-  } catch(e) { showSyncBadge('offline'); }
+    if(!silencioso) showSyncBadge('ok');
+    if(silencioso) renderAll(); // atualiza tela no pull automático
+  } catch(e) { if(!silencioso) showSyncBadge('offline'); }
 }
 function marcarDadosSujos() {
   dadosSujos = true;
@@ -2492,6 +2500,15 @@ function openModal(id) {
       else document.getElementById(sid).innerHTML=deptoOpts;
     } catch(e){}
   });
+
+  // Limpa campos do modal de líder ao abrir para novo cadastro
+  if(id === 'modalLider' && !editingLiderId) {
+    try { document.getElementById('lNome').value=''; } catch(e){}
+    try { document.getElementById('lContato').value=''; } catch(e){}
+    try { document.getElementById('lDepartamento').value=''; } catch(e){}
+    try { document.getElementById('lFuncao').value=''; } catch(e){}
+    try { document.getElementById('modalLiderTitle').textContent='Novo Líder'; } catch(e){}
+  }
 }
 function closeModal(id) {
   document.getElementById(id).classList.remove('open');
@@ -2503,7 +2520,7 @@ function closeModal(id) {
   try{ document.getElementById('modalAtivTitle').textContent='Nova Atividade'; }catch(e){}
 }
 document.querySelectorAll('.modal-backdrop').forEach(b=>{
-  b.addEventListener('click',e=>{ if(e.target===b) b.classList.remove('open'); });
+  b.addEventListener('click',e=>{ if(e.target===b) closeModal(b.id); });
 });
 
 // ═══════════════════════════════════════════════
@@ -3411,7 +3428,7 @@ function saveLider() {
     departamento:document.getElementById('lDepartamento').value,
     funcao:      document.getElementById('lFuncao').value.trim(),
   };
-  if(!val.nome||!val.contato) return alert('Preencha Nome e WhatsApp.');
+  if(!val.nome) return alert('Preencha o nome do líder.');
 
   let deptoAntigo = '';
 
@@ -3438,10 +3455,12 @@ function saveLider() {
     lideres.push(val);
   }
 
+  editingLiderId = null;
+
   // Aplica novo líder nos jovens do departamento selecionado
   if(val.departamento) {
     const n = sincronizarLiderNosJovens(val.departamento, val.nome, '');
-    if(n > 0) showToast(`Líder salvo! ${n} jovem(ns) de "${val.departamento}" atualizado(s).`);
+    if(n > 0) showToast(`Líder salvo! ${n} jovem(ns) de "${val.departamento}" atualizados.`);
     else showToast('Líder salvo!');
   } else {
     showToast('Líder salvo!');
