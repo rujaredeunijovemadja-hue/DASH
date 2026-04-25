@@ -1289,131 +1289,30 @@ td.mono { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight
 // ═══════════════════════════════════════════════
 // CONFIG & GAS SYNC
 // ═══════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════════
+// SYNC — Regras absolutas:
+//   1. Push só acontece quando o usuário clica ☁️ Salvar (nunca automático)
+//   2. Pull nunca roda enquanto há dados sujos (dadosSujos = true)
+//   3. Push e pull nunca rodam ao mesmo tempo (syncPending trava ambos)
+//   4. dadosSujos persiste no localStorage — sobrevive a reloads e login/logout
+// ══════════════════════════════════════════════════════════════════════════════
+
 const GAS_URL_DEFAULT = 'https://script.google.com/macros/s/AKfycbxEmHG-5CMmoc9QCaA1r0RekTOrP43z-89Znw75ENW82rCZxueUpFUTKBY3iAgrXL-6/exec';
-// Força atualização se ainda estiver com a URL antiga
+// Força URL correta caso o localStorage tenha a versão antiga
 const _urlAntiga = 'AKfycbybKnnsOLHFjh_ft0I9p0FsD43utVxRtqMYgDB0xfzL1gM3AwFG-vXfGrVQq8WkQ8FL';
 if (!localStorage.getItem('gasUrl') || localStorage.getItem('gasUrl').includes(_urlAntiga)) {
   localStorage.setItem('gasUrl', GAS_URL_DEFAULT);
 }
 const GAS_URL = localStorage.getItem('gasUrl') || GAS_URL_DEFAULT;
-let syncTimer = null, syncPending = false;
+
+let syncPending    = false; // trava global — impede push e pull simultâneos
 let autoSyncInterval = null;
-// Verifica se há dados locais que podem estar fora de sincronia
-// (flag salvo no localStorage para persistir entre sessões)
-let dadosSujos = localStorage.getItem('dadosSujos') === 'true';
+let dadosSujos     = localStorage.getItem('dadosSujos') === 'true'; // persiste entre sessões
 
-// Push desativado — apenas manual via botão nas Configurações
-function schedulePush() { /* push automático desativado */ }
+// Chamado em todo saveData() — nunca dispara push
+function schedulePush() { /* intencional: push é sempre manual */ }
 
-function iniciarAutoSync() {
-  if(!GAS_URL) return;
-  pararAutoSync();
-  pullFromSheets(); // pull ao fazer login (dados ainda limpos)
-  autoSyncInterval = setInterval(() => {
-    // Pull automático só roda se não há alterações locais pendentes
-    // Evita sobrescrever dados recém-salvos que ainda não foram ao Sheets
-    if(!dadosSujos) pullFromSheets(false, true); // silencioso
-  }, 2 * 60 * 1000);
-  console.log('🔄 AutoSync iniciado — pull a cada 2 min (somente se limpo)');
-}
-
-// Para o ciclo ao fazer logout
-function pararAutoSync() {
-  if(autoSyncInterval) {
-    clearInterval(autoSyncInterval);
-    autoSyncInterval = null;
-  }
-}
-// ── PUSH via fetch com Content-Type text/plain (contorna preflight CORS do GAS)
-async function pushToSheets() {
-  if(!GAS_URL||syncPending) return;
-  syncPending=true; showSyncBadge('syncing');
-  const payload = JSON.stringify({
-    action:'push',
-    jovens, frequencias, recuperacoes, departamentos, lideres,
-    historicoMensal, metas, regras, atividades, liderSupremo,
-    usuario: document.getElementById('userName')?.textContent || 'Dashboard',
-  });
-  try {
-    // text/plain evita preflight OPTIONS → GAS aceita sem CORS bloqueado
-    const r = await fetch(GAS_URL, {
-      method: 'POST',
-      body: payload,
-      headers: { 'Content-Type': 'text/plain' },
-    });
-    const txt = await r.text();
-    let d = {};
-    try { d = JSON.parse(txt); } catch(e) { d = { ok: true }; } // GAS às vezes retorna HTML redirect
-    if(d.ok !== false) { dadosSujos = false; limparAvisoPendente(); showSyncBadge('ok'); }
-    else showSyncBadge('error');
-  } catch(e) {
-    // Fallback: no-cors (não lê resposta, mas o GAS executa mesmo assim)
-    try {
-      await fetch(GAS_URL, { method:'POST', body: payload, mode:'no-cors', headers:{'Content-Type':'text/plain'} });
-      // Com no-cors não temos resposta — assumimos ok e verificamos no próximo pull
-      dadosSujos = false; limparAvisoPendente(); showSyncBadge('ok');
-    } catch(e2) { showSyncBadge('error'); }
-  } finally { syncPending=false; }
-}
-
-// ── PULL via JSONP (contorna CORS no GET do GAS sem precisar de configuração extra)
-function pullFromSheets(forcar=false, silencioso=false) {
-  if(!GAS_URL) return Promise.resolve();
-
-  // Nunca sobrescreve dados sujos sem confirmação
-  if(dadosSujos && !forcar) {
-    if(silencioso) return Promise.resolve();
-    const ok = confirm(
-      '⚠️ Você tem alterações não sincronizadas!\n\n' +
-      'Se puxar agora, suas alterações locais serão perdidas.\n\n' +
-      'OK = descartar e puxar da planilha\n' +
-      'Cancelar = voltar e clicar ☁️ Salvar primeiro.'
-    );
-    if(!ok) return Promise.resolve();
-  }
-
-  if(!silencioso) showSyncBadge('syncing');
-
-  return new Promise((resolve) => {
-    const cbName = '__rujaCallback_' + Date.now();
-    const script  = document.createElement('script');
-    const timeout = setTimeout(() => {
-      cleanup();
-      if(!silencioso) showSyncBadge('offline');
-      resolve();
-    }, 15000);
-
-    function cleanup() {
-      clearTimeout(timeout);
-      delete window[cbName];
-      if(script.parentNode) script.parentNode.removeChild(script);
-    }
-
-    window[cbName] = function(d) {
-      cleanup();
-      try {
-        if(d.jovens)          { jovens=d.jovens;               localStorage.setItem('jovens',JSON.stringify(jovens)); }
-        if(d.frequencias)     { frequencias=d.frequencias;     localStorage.setItem('frequencias',JSON.stringify(frequencias)); }
-        if(d.recuperacoes)    { recuperacoes=d.recuperacoes;   localStorage.setItem('recuperacoes',JSON.stringify(recuperacoes)); }
-        if(d.departamentos)   { departamentos=d.departamentos; localStorage.setItem('departamentos',JSON.stringify(departamentos)); }
-        if(d.lideres)         { lideres=d.lideres;             localStorage.setItem('lideres',JSON.stringify(lideres)); }
-        if(d.historicoMensal) { historicoMensal=d.historicoMensal; localStorage.setItem('historicoMensal',JSON.stringify(historicoMensal)); }
-        if(d.metas)           { metas=d.metas;                 localStorage.setItem('metas',JSON.stringify(metas)); }
-        if(d.regras)          { regras=d.regras;               localStorage.setItem('regras',JSON.stringify(regras)); }
-        if(d.atividades)      { atividades=d.atividades;       localStorage.setItem('atividades',JSON.stringify(atividades)); }
-        if(d.liderSupremo)    { liderSupremo=d.liderSupremo;   localStorage.setItem('liderSupremo',JSON.stringify(liderSupremo)); }
-        dadosSujos = false; limparAvisoPendente();
-        if(!silencioso) showSyncBadge('ok');
-        renderAll();
-      } catch(e) { if(!silencioso) showSyncBadge('error'); }
-      resolve();
-    };
-
-    script.src = GAS_URL + '?callback=' + cbName;
-    script.onerror = () => { cleanup(); if(!silencioso) showSyncBadge('offline'); resolve(); };
-    document.head.appendChild(script);
-  });
-}
+// ── Marca dados como não sincronizados (chamado pelo saveData)
 function marcarDadosSujos() {
   dadosSujos = true;
   localStorage.setItem('dadosSujos', 'true');
@@ -1430,15 +1329,152 @@ function marcarDadosSujos() {
   if(cfg) { cfg.textContent = '🔴 Não salvo'; cfg.style.color = 'var(--red)'; }
 }
 
+// ── Limpa o aviso após push bem-sucedido
 function limparAvisoPendente() {
   dadosSujos = false;
   localStorage.setItem('dadosSujos', 'false');
   const btn = document.getElementById('btnSyncManual');
   if(btn) {
+    btn.textContent      = '☁️ Salvar';
     btn.style.background = 'rgba(59,130,246,0.12)';
     btn.style.color      = '#3B82F6';
     btn.style.border     = '1px solid rgba(59,130,246,0.3)';
+    btn.style.opacity    = '1';
+    btn.disabled         = false;
   }
+}
+
+// ── PUSH manual — acionado apenas pelo botão ☁️ Salvar
+async function syncManual() {
+  if(!GAS_URL || syncPending) return;
+  syncPending = true;
+  showSyncBadge('syncing');
+
+  const payload = JSON.stringify({
+    action: 'push',
+    jovens, frequencias, recuperacoes, departamentos, lideres,
+    historicoMensal, metas, regras, atividades, liderSupremo,
+    usuario: document.getElementById('userName')?.textContent || 'Dashboard',
+  });
+
+  try {
+    // Content-Type: text/plain evita preflight CORS — GAS aceita normalmente
+    const r = await fetch(GAS_URL, {
+      method: 'POST',
+      body: payload,
+      headers: { 'Content-Type': 'text/plain' },
+    });
+    const txt = await r.text();
+    let d = {};
+    try { d = JSON.parse(txt); } catch(e) { d = { ok: true }; }
+    if(d.ok !== false) { limparAvisoPendente(); showSyncBadge('ok'); }
+    else showSyncBadge('error');
+  } catch(e) {
+    // Fallback no-cors: GAS executa mas não retorna resposta legível
+    try {
+      await fetch(GAS_URL, { method:'POST', body:payload, mode:'no-cors', headers:{'Content-Type':'text/plain'} });
+      limparAvisoPendente(); showSyncBadge('ok');
+    } catch(e2) { showSyncBadge('error'); }
+  } finally {
+    syncPending = false;
+  }
+}
+
+// ── PULL via JSONP — GET sem restrição de CORS
+// Regra: só roda se NÃO há dados sujos E NÃO há sync em andamento
+function pullFromSheets(forcar=false, silencioso=false) {
+  if(!GAS_URL) return Promise.resolve();
+
+  // Trava: nunca roda junto com push
+  if(syncPending) return Promise.resolve();
+
+  // Trava: nunca sobrescreve dados locais não sincronizados
+  if(dadosSujos) {
+    if(silencioso) return Promise.resolve(); // pull automático: simplesmente cancela
+    // Pull manual com dados sujos: pergunta antes
+    if(!forcar) {
+      const ok = confirm(
+        '⚠️ Você tem dados não sincronizados!\n\n' +
+        'Puxar agora vai descartar suas alterações locais.\n\n' +
+        'OK = descartar e puxar da planilha\n' +
+        'Cancelar = manter e clicar ☁️ Salvar primeiro'
+      );
+      if(!ok) return Promise.resolve();
+    }
+  }
+
+  if(!silencioso) showSyncBadge('syncing');
+  syncPending = true;
+
+  return new Promise((resolve) => {
+    const cbName = '__rujaPull_' + Date.now();
+    const script  = document.createElement('script');
+
+    const timeout = setTimeout(() => {
+      cleanup();
+      syncPending = false;
+      if(!silencioso) showSyncBadge('offline');
+      resolve();
+    }, 15000);
+
+    function cleanup() {
+      clearTimeout(timeout);
+      delete window[cbName];
+      if(script.parentNode) script.parentNode.removeChild(script);
+    }
+
+    window[cbName] = function(d) {
+      cleanup();
+      syncPending = false;
+      try {
+        if(d.jovens)          { jovens=d.jovens;               localStorage.setItem('jovens',JSON.stringify(jovens)); }
+        if(d.frequencias)     { frequencias=d.frequencias;     localStorage.setItem('frequencias',JSON.stringify(frequencias)); }
+        if(d.recuperacoes)    { recuperacoes=d.recuperacoes;   localStorage.setItem('recuperacoes',JSON.stringify(recuperacoes)); }
+        if(d.departamentos)   { departamentos=d.departamentos; localStorage.setItem('departamentos',JSON.stringify(departamentos)); }
+        if(d.lideres)         { lideres=d.lideres;             localStorage.setItem('lideres',JSON.stringify(lideres)); }
+        if(d.historicoMensal) { historicoMensal=d.historicoMensal; localStorage.setItem('historicoMensal',JSON.stringify(historicoMensal)); }
+        if(d.metas)           { metas=d.metas;                 localStorage.setItem('metas',JSON.stringify(metas)); }
+        if(d.regras)          { regras=d.regras;               localStorage.setItem('regras',JSON.stringify(regras)); }
+        if(d.atividades)      { atividades=d.atividades;       localStorage.setItem('atividades',JSON.stringify(atividades)); }
+        if(d.liderSupremo)    { liderSupremo=d.liderSupremo;   localStorage.setItem('liderSupremo',JSON.stringify(liderSupremo)); }
+        limparAvisoPendente();
+        if(!silencioso) showSyncBadge('ok');
+        renderAll();
+      } catch(e) {
+        if(!silencioso) showSyncBadge('error');
+      }
+      resolve();
+    };
+
+    script.src    = GAS_URL + '?callback=' + cbName;
+    script.onerror = () => {
+      cleanup(); syncPending = false;
+      if(!silencioso) showSyncBadge('offline');
+      resolve();
+    };
+    document.head.appendChild(script);
+  });
+}
+
+// ── AutoSync: pull a cada 2 min — mas só se tudo estiver limpo
+function iniciarAutoSync() {
+  if(!GAS_URL) return;
+  pararAutoSync();
+  // Pull no login só se não há dados pendentes
+  if(!dadosSujos) {
+    pullFromSheets(false, true);
+  } else {
+    // Já tem dados locais não sincronizados — avisa sem fazer pull
+    showSyncBadge('error');
+    marcarDadosSujos();
+  }
+  autoSyncInterval = setInterval(() => {
+    if(!dadosSujos && !syncPending) pullFromSheets(false, true);
+  }, 2 * 60 * 1000);
+}
+
+function pararAutoSync() {
+  if(autoSyncInterval) { clearInterval(autoSyncInterval); autoSyncInterval = null; }
 }
 
 function showSyncBadge(s) {
@@ -1472,10 +1508,6 @@ function showSyncBadge(s) {
   }
 }
 
-async function syncManual() {
-  if(syncPending) return;
-  await pushToSheets();
-}
 function saveGasUrl() {
   const u=document.getElementById('gasUrlInput').value.trim();
   if(!u.startsWith('https://script.google.com')) return alert('URL inválida.');
@@ -3063,7 +3095,6 @@ function saveJovem() {
   if(editingId) { const i=jovens.findIndex(j=>j.id===editingId); if(i!==-1) jovens[i]={...jovens[i],...val}; }
   else { val.id=Date.now(); jovens.push(val); }
   saveData(); closeModal('modalJovem'); showToast('Jovem salvo!'); renderJovens();
-  if(GAS_URL) syncManual();
 }
 function editJovem(id) {
   const j=jovens.find(x=>x.id===id); if(!j) return;
@@ -3185,7 +3216,6 @@ function saveDepto() {
 
   saveData(); closeModal('modalDepto'); renderDepartamentos();
   if(currentPage==='jovens') renderJovens();
-  if(GAS_URL) syncManual();
 }
 function editDepto(id) {
   const d=departamentos.find(x=>x.id===id); if(!d) return;
@@ -3519,7 +3549,6 @@ function saveLider() {
   if(currentPage==='jovens') renderJovens();
   if(currentPage==='departamentos') renderDepartamentos();
   // Push imediato para garantir que o líder seja salvo na planilha antes de qualquer pull
-  if(GAS_URL) syncManual();
 }
 
 function editLider(id) {
