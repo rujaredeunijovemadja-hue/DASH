@@ -1289,12 +1289,14 @@ td.mono { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight
 // ═══════════════════════════════════════════════
 // CONFIG & GAS SYNC
 // ═══════════════════════════════════════════════
-const GAS_URL_DEFAULT = 'https://script.google.com/macros/s/AKfycbybKnnsOLHFjh_ft0I9p0FsD43utVxRtqMYgDB0xfzL1gM3AwFG-vXfGrVQq8WkQ8FL/exec';
+const GAS_URL_DEFAULT = 'https://script.google.com/macros/s/AKfycbxEmHG-5CMmoc9QCaA1r0RekTOrP43z-89Znw75ENW82rCZxueUpFUTKBY3iAgrXL-6/exec';
 if (!localStorage.getItem('gasUrl')) localStorage.setItem('gasUrl', GAS_URL_DEFAULT);
 const GAS_URL = localStorage.getItem('gasUrl') || GAS_URL_DEFAULT;
 let syncTimer = null, syncPending = false;
 let autoSyncInterval = null;
-let dadosSujos = false; // true quando há alterações não sincronizadas
+// Verifica se há dados locais que podem estar fora de sincronia
+// (flag salvo no localStorage para persistir entre sessões)
+let dadosSujos = localStorage.getItem('dadosSujos') === 'true';
 
 // Push desativado — apenas manual via botão nas Configurações
 function schedulePush() { /* push automático desativado */ }
@@ -1336,7 +1338,7 @@ async function pullFromSheets(forcar=false, silencioso=false) {
   // Pull automático (silencioso): NUNCA roda com dados sujos
   if(silencioso && dadosSujos) return;
 
-  // Pull manual com dados não salvos: pergunta antes de sobrescrever
+  // Pull no login sem forçar: também respeita dados sujos no localStorage
   if(!forcar && !silencioso && dadosSujos) {
     const ok = confirm(
       '⚠️ Você tem alterações não sincronizadas!\n\n' +
@@ -1346,6 +1348,10 @@ async function pullFromSheets(forcar=false, silencioso=false) {
     );
     if(!ok) return;
   }
+
+  // Proteção extra: pull no login (forcar=false, silencioso=false) não sobrescreve se há dados sujos
+  // Isso evita que o pull automático ao fazer login apague líderes/jovens recém-adicionados
+  if(forcar === false && !silencioso && dadosSujos) return;
 
   if(!silencioso) showSyncBadge('syncing');
   try {
@@ -1367,6 +1373,7 @@ async function pullFromSheets(forcar=false, silencioso=false) {
 }
 function marcarDadosSujos() {
   dadosSujos = true;
+  localStorage.setItem('dadosSujos', 'true');
   const btn = document.getElementById('btnSyncManual');
   if(btn && !btn.disabled) {
     btn.textContent = '🔴 Salvar agora';
@@ -1382,6 +1389,7 @@ function marcarDadosSujos() {
 
 function limparAvisoPendente() {
   dadosSujos = false;
+  localStorage.setItem('dadosSujos', 'false');
   const btn = document.getElementById('btnSyncManual');
   if(btn) {
     btn.style.background = 'rgba(59,130,246,0.12)';
@@ -2414,10 +2422,17 @@ function doLogin() {
   document.getElementById('userName').textContent=u;
   document.getElementById('userRole').textContent=r;
   document.getElementById('userAvatar').textContent=u.charAt(0).toUpperCase();
-  // Pull para pegar dados mais recentes, depois inicia o ciclo automático
-  pullFromSheets()
-    .then(()=>{ renderAll(); iniciarAutoSync(); })
-    .catch(()=>{ renderAll(); iniciarAutoSync(); });
+  // Se há dados não sincronizados no localStorage, NÃO faz pull automático no login
+  // Isso evita que líderes/jovens recém-adicionados sejam apagados pelo pull
+  if(dadosSujos) {
+    renderAll();
+    iniciarAutoSync();
+    showToast('⚠️ Dados locais não sincronizados — clique ☁️ Salvar');
+  } else {
+    pullFromSheets()
+      .then(()=>{ renderAll(); iniciarAutoSync(); })
+      .catch(()=>{ renderAll(); iniciarAutoSync(); });
+  }
 }
 function doLogout() {
   pararAutoSync(); // cancela o push automático ao sair
@@ -3016,6 +3031,7 @@ function saveJovem() {
   if(editingId) { const i=jovens.findIndex(j=>j.id===editingId); if(i!==-1) jovens[i]={...jovens[i],...val}; }
   else { val.id=Date.now(); jovens.push(val); }
   saveData(); closeModal('modalJovem'); showToast('Jovem salvo!'); renderJovens();
+  if(GAS_URL) syncManual();
 }
 function editJovem(id) {
   const j=jovens.find(x=>x.id===id); if(!j) return;
@@ -3137,6 +3153,7 @@ function saveDepto() {
 
   saveData(); closeModal('modalDepto'); renderDepartamentos();
   if(currentPage==='jovens') renderJovens();
+  if(GAS_URL) syncManual();
 }
 function editDepto(id) {
   const d=departamentos.find(x=>x.id===id); if(!d) return;
@@ -3469,6 +3486,8 @@ function saveLider() {
   saveData(); closeModal('modalLider'); renderLideres();
   if(currentPage==='jovens') renderJovens();
   if(currentPage==='departamentos') renderDepartamentos();
+  // Push imediato para garantir que o líder seja salvo na planilha antes de qualquer pull
+  if(GAS_URL) syncManual();
 }
 
 function editLider(id) {
