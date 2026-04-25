@@ -970,10 +970,11 @@ td.mono { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight
     </div>
     <div class="form-row">
       <div class="form-group">
-        <label class="form-label">Departamento</label>
-        <select class="form-select" id="jDepartamento">
-          <option value="">Sem departamento</option>
-        </select>
+        <label class="form-label">Departamento(s)</label>
+        <div id="jDepartamentoWrap" style="display:flex;flex-wrap:wrap;gap:6px;padding:10px;background:var(--black3);border:1px solid var(--border);border-radius:10px;min-height:42px">
+          <span style="font-size:12px;color:var(--text3);align-self:center">Carregando departamentos...</span>
+        </div>
+        <input type="hidden" id="jDepartamento">
       </div>
       <div class="form-group">
         <label class="form-label">Líder Responsável</label>
@@ -1861,6 +1862,42 @@ function copiarMsgAtividade(id, tipo) {
     });
 }
 // ══════════════════════════════════════════════════════════════════════════════
+// MULTI-DEPARTAMENTO — helpers
+// ══════════════════════════════════════════════════════════════════════════════
+function syncDeptoHidden() {
+  const checks = document.querySelectorAll('#jDepartamentoWrap input[type=checkbox]:checked');
+  const vals   = Array.from(checks).map(c=>c.value);
+  document.getElementById('jDepartamento').value = vals.join(';');
+  // Destaca visualmente os selecionados
+  document.querySelectorAll('#jDepartamentoWrap label').forEach(lbl=>{
+    const chk = lbl.querySelector('input');
+    lbl.style.borderColor   = chk.checked ? 'var(--red)'  : 'var(--border)';
+    lbl.style.background    = chk.checked ? 'var(--red-faint)' : 'var(--black2)';
+    lbl.style.color         = chk.checked ? 'var(--text)'  : '';
+  });
+}
+
+function setDeptoCheckboxes(val) {
+  // val pode ser string simples "Louvor" ou multi "Louvor;Mídia"
+  const vals = val ? val.split(';').map(v=>v.trim()).filter(Boolean) : [];
+  document.querySelectorAll('#jDepartamentoWrap input[type=checkbox]').forEach(chk=>{
+    chk.checked = vals.includes(chk.value);
+  });
+  syncDeptoHidden();
+}
+
+function temDepto(jovem, nome) {
+  if(!jovem.departamento) return false;
+  return jovem.departamento.split(';').map(v=>v.trim()).includes(nome);
+}
+
+function deptosBadges(deptoStr) {
+  if(!deptoStr) return '<span class="badge badge-risco">Sem depto</span>';
+  return deptoStr.split(';').map(v=>v.trim()).filter(Boolean)
+    .map(v=>`<span class="badge badge-blue">${v}</span>`).join(' ');
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
 // CSV — EXPORTAR / IMPORTAR
 // ══════════════════════════════════════════════════════════════════════════════
 const CSV_DATASETS = {
@@ -2073,7 +2110,7 @@ function renderAniversarios() {
             <div class="aniv-avatar" style="background:${cor};color:#fff">${j.nome.charAt(0)}</div>
             <div class="aniv-info">
               <div class="aniv-nome">${j.nome}</div>
-              <div class="aniv-data">📅 ${dataStr} · ${j.idade?j.idade+' anos':''} · ${j.departamento||'Sem departamento'}</div>
+              <div class="aniv-data">📅 ${dataStr} · ${j.idade?j.idade+' anos':''} · ${j.departamento ? j.departamento.replace(/;/g,' · ') : 'Sem departamento'}</div>
             </div>
             <div class="aniv-dias" style="color:${cor2}">${diasStr}</div>
           </div>`;
@@ -2218,8 +2255,20 @@ function openModal(id) {
   const liderOpts = ['<option value="">Sem líder</option>',...lideres.map(l=>`<option value="${l.nome}">${l.nome}</option>`)].join('');
   ['jLider','rResponsavel'].forEach(sid=>{ try{ document.getElementById(sid).innerHTML=liderOpts; }catch(e){} });
   // Preenche selects de departamentos
+  // Checkboxes multi-departamento no modal de jovem
+  const wrap = document.getElementById('jDepartamentoWrap');
+  if(wrap) {
+    wrap.innerHTML = departamentos.length
+      ? departamentos.map(d=>`
+        <label style="display:flex;align-items:center;gap:5px;padding:4px 10px;background:var(--black2);border:1px solid var(--border);border-radius:20px;cursor:pointer;font-size:12px;font-weight:500;transition:all .15s" id="deptoChk_wrap_${d.nome.replace(/\s/g,'_')}">
+          <input type="checkbox" value="${d.nome}" id="deptoChk_${d.nome.replace(/\s/g,'_')}" onchange="syncDeptoHidden()" style="accent-color:var(--red);cursor:pointer">
+          ${d.icone||'🏛️'} ${d.nome}
+        </label>`).join('')
+      : '<span style="font-size:12px;color:var(--text3)">Nenhum departamento cadastrado</span>';
+  }
+
   const deptoOpts = ['<option value="">Sem departamento</option>',...departamentos.map(d=>`<option value="${d.nome}">${d.icone||''} ${d.nome}</option>`)].join('');
-  ['jDepartamento','lDepartamento','dLider'].forEach(sid=>{
+  ['lDepartamento','dLider'].forEach(sid=>{
     try {
       if(sid==='dLider') document.getElementById(sid).innerHTML=['<option value="">Sem líder</option>',...lideres.map(l=>`<option value="${l.nome}">${l.nome}</option>`)].join('');
       else document.getElementById(sid).innerHTML=deptoOpts;
@@ -2275,7 +2324,7 @@ function renderDashboard() {
   // Chart departamentos (barras)
   if(chartDepto) chartDepto.destroy();
   const deptoNomes = departamentos.map(d=>d.icone+' '+d.nome);
-  const deptoCounts = departamentos.map(d=>jovens.filter(j=>j.departamento===d.nome&&j.status==='Ativo').length);
+  const deptoCounts = departamentos.map(d=>jovens.filter(j=>temDepto(j,d.nome)&&j.status==='Ativo').length);
   const ctxD=document.getElementById('chartDepto').getContext('2d');
   chartDepto=new Chart(ctxD,{
     type:'bar',
@@ -2299,7 +2348,7 @@ function renderDashboard() {
   document.getElementById('dashOscilando').innerHTML = oscil.length
     ? oscil.map(j=>`<tr>
         <td><strong>${j.nome}</strong></td>
-        <td>${j.departamento||'<span class="badge badge-risco">Sem depto</span>'}</td>
+        <td>${deptosBadges(j.departamento)}</td>
         <td class="mono yellow">${getFreqPct(j.id)}%</td>
         <td style="color:var(--text3);font-size:12px">${j.obs.split('+')[0]||'—'}</td>
       </tr>`).join('')
@@ -2393,7 +2442,7 @@ function renderJovensTable(lista) {
         <td style="text-align:center">${j.idade||'—'}</td>
         <td style="color:var(--red)">${j.contato}</td>
         <td style="font-size:12px;color:var(--text3);max-width:160px">${j.endereco||'—'}</td>
-        <td>${j.departamento?`<span class="badge badge-blue">${j.departamento}</span>`:`<span class="badge badge-risco">Sem depto</span>`}</td>
+        <td>${deptosBadges(j.departamento)}</td>
         <td style="font-size:12px">${j.lider||'—'}</td>
         <td>${getStatusBadge(j.status)}</td>
         <td class="mono">${getFreqPct(j.id)}%</td>
@@ -2429,7 +2478,7 @@ function renderFrequencia() {
     const ultima=frequencias.filter(f=>f.jovemId===j.id).sort((a,b)=>b.data.localeCompare(a.data))[0];
     return `<tr>
       <td><strong>${j.nome}</strong></td>
-      <td>${j.departamento||'<span style="color:var(--text3)">—</span>'}</td>
+      <td>${deptosBadges(j.departamento)||'<span style="color:var(--text3)">—</span>'}</td>
       <td>
         <div style="display:flex;align-items:center;gap:10px">
           <span class="mono ${pct>=regras.ativo?'green':pct>=regras.oscilando?'yellow':'red'}">${pct}%</span>
@@ -2519,7 +2568,7 @@ function renderDeptoCards() {
   let html = '';
 
   deptosList.forEach((d,i) => {
-    const jDepto = jovens.filter(j=>j.departamento===d.nome);
+    const jDepto = jovens.filter(j=>temDepto(j,d.nome));
     const ativos  = jDepto.filter(j=>j.status==='Ativo').length;
     const total   = jDepto.length;
     const pct     = d.capacidade ? Math.round(ativos/d.capacidade*100) : 0;
@@ -2643,7 +2692,7 @@ function renderDepartamentos() {
 
   document.getElementById('deptoTable').innerHTML=departamentos.length
     ? departamentos.map(d=>{
-        const ativos=jovens.filter(j=>j.departamento===d.nome&&j.status==='Ativo').length;
+        const ativos=jovens.filter(j=>temDepto(j,d.nome)&&j.status==='Ativo').length;
         const vagas=(d.capacidade||0)-ativos;
         return `<tr>
           <td><strong>${d.icone||'🏛️'} ${d.nome}</strong>${d.desc?`<div style="font-size:11px;color:var(--text3)">${d.desc}</div>`:''}</td>
@@ -2743,7 +2792,7 @@ function editJovem(id) {
     document.getElementById('jContato').value=j.contato;
     document.getElementById('jInstagram').value=j.instagram||'';
     document.getElementById('jEndereco').value=j.endereco||'';
-    document.getElementById('jDepartamento').value=j.departamento||'';
+    setDeptoCheckboxes(j.departamento||'');
     document.getElementById('jLider').value=j.lider||'';
     document.getElementById('jStatus').value=j.status;
     document.getElementById('jEntrada').value=j.entrada||'';
