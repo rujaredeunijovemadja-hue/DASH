@@ -781,9 +781,9 @@ td.mono { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight
             <div style="font-size:11px;color:var(--text3);margin-top:6px">Todos os dados sincronizam automaticamente entre os líderes.</div>
           </div>
           <div style="display:flex;gap:10px;margin-top:4px">
-            <button class="btn btn-ghost btn-sm" onclick="pullFromSheets(false).then(()=>{renderAll();showToast('Dados atualizados!')})">⬇️ Puxar agora</button>
-            <button class="btn btn-ghost btn-sm" onclick="pullFromSheets(true).then(()=>{renderAll();showToast('Dados puxados (forçado)!')})" title="Descarta alterações locais e força puxar da planilha">⚠️ Forçar pull</button>
-            <button class="btn btn-ghost btn-sm" onclick="pushToSheets()">⬆️ Enviar agora</button>
+            <button class="btn btn-ghost btn-sm" onclick="puxarManual()">⬇️ Puxar agora</button>
+            <button class="btn btn-ghost btn-sm" onclick="puxarForcado()" title="Descarta alterações locais e força puxar da planilha">⚠️ Forçar pull</button>
+            <button class="btn btn-ghost btn-sm" onclick="syncManual()">⬆️ Salvar agora</button>
             <button class="btn btn-ghost btn-sm" onclick="recalcularTodosLideres();saveData();renderAll();showToast('Líderes recalculados!')" title="Relê a tabela de Líderes e atualiza o campo Líder de cada jovem pelo departamento" style="border-color:rgba(245,158,11,0.4);color:var(--yellow)">🔄 Recalcular líderes</button>
           </div>
         </div>
@@ -1436,7 +1436,7 @@ function pullFromSheets(forcar=false, silencioso=false) {
         if(d.liderSupremo)    { liderSupremo=d.liderSupremo;   localStorage.setItem('liderSupremo',JSON.stringify(liderSupremo)); }
         limparAvisoPendente();
         if(!silencioso) showSyncBadge('ok');
-        renderAll();
+        else renderAll(); // pull automático silencioso ainda precisa atualizar a tela
       } catch(e) {
         if(!silencioso) showSyncBadge('error');
       }
@@ -1451,6 +1451,18 @@ function pullFromSheets(forcar=false, silencioso=false) {
     };
     document.head.appendChild(script);
   });
+}
+
+async function puxarManual() {
+  await pullFromSheets(false, false);
+  renderAll();
+  showToast('Dados atualizados!');
+}
+
+async function puxarForcado() {
+  await pullFromSheets(true, false);
+  renderAll();
+  showToast('Dados puxados da planilha!');
 }
 
 // ── AutoSync: pull a cada 2 min — mas só se tudo estiver limpo
@@ -2483,16 +2495,13 @@ function doLogin() {
   document.getElementById('userName').textContent=u;
   document.getElementById('userRole').textContent=r;
   document.getElementById('userAvatar').textContent=u.charAt(0).toUpperCase();
-  // Se há dados não sincronizados no localStorage, NÃO faz pull automático no login
-  // Isso evita que líderes/jovens recém-adicionados sejam apagados pelo pull
+
+  // Renderiza imediatamente com dados do localStorage
+  renderAll();
+  iniciarAutoSync();
+
   if(dadosSujos) {
-    renderAll();
-    iniciarAutoSync();
     showToast('⚠️ Dados locais não sincronizados — clique ☁️ Salvar');
-  } else {
-    pullFromSheets()
-      .then(()=>{ renderAll(); iniciarAutoSync(); })
-      .catch(()=>{ renderAll(); iniciarAutoSync(); });
   }
 }
 function doLogout() {
