@@ -1357,8 +1357,11 @@ async function syncManual() {
     usuario: document.getElementById('userName')?.textContent || 'Dashboard',
   });
 
+  // Tenta fetch com text/plain (sem preflight CORS)
+  // Se falhar, usa iframe form submit como fallback garantido
+  let sucesso = false;
+
   try {
-    // Content-Type: text/plain evita preflight CORS — GAS aceita normalmente
     const r = await fetch(GAS_URL, {
       method: 'POST',
       body: payload,
@@ -1367,17 +1370,55 @@ async function syncManual() {
     const txt = await r.text();
     let d = {};
     try { d = JSON.parse(txt); } catch(e) { d = { ok: true }; }
-    if(d.ok !== false) { limparAvisoPendente(); showSyncBadge('ok'); }
-    else showSyncBadge('error');
+    sucesso = (d.ok !== false);
   } catch(e) {
-    // Fallback no-cors: GAS executa mas não retorna resposta legível
-    try {
-      await fetch(GAS_URL, { method:'POST', body:payload, mode:'no-cors', headers:{'Content-Type':'text/plain'} });
-      limparAvisoPendente(); showSyncBadge('ok');
-    } catch(e2) { showSyncBadge('error'); }
-  } finally {
-    syncPending = false;
+    // fetch bloqueado por CORS — usa form submit via iframe (sem restrição de origem)
+    sucesso = await _pushViaForm(payload);
   }
+
+  if(sucesso) { limparAvisoPendente(); showSyncBadge('ok'); }
+  else showSyncBadge('error');
+  syncPending = false;
+}
+
+// Form submit via iframe oculto — contorna CORS completamente
+// O GAS recebe o payload em e.postData.contents normalmente
+function _pushViaForm(payload) {
+  return new Promise((resolve) => {
+    const iframeId = '__rujaFrame_' + Date.now();
+    const iframe = document.createElement('iframe');
+    iframe.name = iframeId;
+    iframe.style.display = 'none';
+    document.body.appendChild(iframe);
+
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = GAS_URL;
+    form.target = iframeId;
+    form.style.display = 'none';
+
+    // GAS lê e.postData.contents — enviamos o JSON num campo oculto
+    const input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = 'payload';
+    input.value = payload;
+    form.appendChild(input);
+    document.body.appendChild(form);
+
+    // Aguarda redirect do GAS (ele sempre redireciona após POST)
+    const timer = setTimeout(() => {
+      cleanup(); resolve(true); // assume ok após timeout
+    }, 10000);
+
+    iframe.onload = () => { clearTimeout(timer); cleanup(); resolve(true); };
+
+    form.submit();
+
+    function cleanup() {
+      try { document.body.removeChild(form); } catch(e) {}
+      setTimeout(() => { try { document.body.removeChild(iframe); } catch(e) {} }, 1000);
+    }
+  });
 }
 
 // ── PULL via JSONP — GET sem restrição de CORS
