@@ -781,9 +781,9 @@ td.mono { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight
             <div style="font-size:11px;color:var(--text3);margin-top:6px">Todos os dados sincronizam automaticamente entre os líderes.</div>
           </div>
           <div style="display:flex;gap:10px;margin-top:4px">
-            <button class="btn btn-ghost btn-sm" onclick="puxarManual()">⬇️ Puxar agora</button>
-            <button class="btn btn-ghost btn-sm" onclick="puxarForcado()" title="Descarta alterações locais e força puxar da planilha">⚠️ Forçar pull</button>
-            <button class="btn btn-ghost btn-sm" onclick="syncManual()">⬆️ Salvar agora</button>
+            <button class="btn btn-ghost btn-sm" onclick="pullFromSheets(false).then(()=>{renderAll();showToast('Dados atualizados!')})">⬇️ Puxar agora</button>
+            <button class="btn btn-ghost btn-sm" onclick="pullFromSheets(true).then(()=>{renderAll();showToast('Dados puxados (forçado)!')})" title="Descarta alterações locais e força puxar da planilha">⚠️ Forçar pull</button>
+            <button class="btn btn-ghost btn-sm" onclick="pushToSheets()">⬆️ Enviar agora</button>
             <button class="btn btn-ghost btn-sm" onclick="recalcularTodosLideres();saveData();renderAll();showToast('Líderes recalculados!')" title="Relê a tabela de Líderes e atualiza o campo Líder de cada jovem pelo departamento" style="border-color:rgba(245,158,11,0.4);color:var(--yellow)">🔄 Recalcular líderes</button>
           </div>
         </div>
@@ -1222,8 +1222,13 @@ td.mono { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight
       </div>
       <div class="form-group">
         <label class="form-label">Função</label>
-        <input type="text" class="form-input" id="lFuncao" placeholder="Ex: Líder de Mídia">
+        <input type="text" class="form-input" id="lFuncao" placeholder="Ex: Pastor, Líder de Mídia...">
       </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">🎂 Data de Nascimento</label>
+      <input type="text" class="form-input date-mask" id="lDataNasc" placeholder="DD/MM/AAAA" maxlength="10" autocomplete="off" oninput="maskDate(this)">
+      <div style="font-size:11px;color:var(--text3);margin-top:4px">Para alertas de aniversário na aba correspondente</div>
     </div>
     <div class="form-footer">
       <button class="btn btn-ghost" onclick="closeModal('modalLider')">Cancelar</button>
@@ -1289,33 +1294,84 @@ td.mono { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight
 // ═══════════════════════════════════════════════
 // CONFIG & GAS SYNC
 // ═══════════════════════════════════════════════
-// ══════════════════════════════════════════════════════════════════════════════
-// SYNC — Regras absolutas:
-//   1. Push só acontece quando o usuário clica ☁️ Salvar (nunca automático)
-//   2. Pull nunca roda enquanto há dados sujos (dadosSujos = true)
-//   3. Push e pull nunca rodam ao mesmo tempo (syncPending trava ambos)
-//   4. dadosSujos persiste no localStorage — sobrevive a reloads e login/logout
-// ══════════════════════════════════════════════════════════════════════════════
-
-const GAS_URL_DEFAULT = 'https://script.google.com/macros/s/AKfycbxEmHG-5CMmoc9QCaA1r0RekTOrP43z-89Znw75ENW82rCZxueUpFUTKBY3iAgrXL-6/exec';
-// Força URL correta caso o localStorage tenha a versão antiga
-const _urlAntiga = 'AKfycbybKnnsOLHFjh_ft0I9p0FsD43utVxRtqMYgDB0xfzL1gM3AwFG-vXfGrVQq8WkQ8FL';
-if (!localStorage.getItem('gasUrl') || localStorage.getItem('gasUrl').includes(_urlAntiga)) {
-  localStorage.setItem('gasUrl', GAS_URL_DEFAULT);
-}
+const GAS_URL_DEFAULT = 'https://script.google.com/macros/s/AKfycbybKnnsOLHFjh_ft0I9p0FsD43utVxRtqMYgDB0xfzL1gM3AwFG-vXfGrVQq8WkQ8FL/exec';
+if (!localStorage.getItem('gasUrl')) localStorage.setItem('gasUrl', GAS_URL_DEFAULT);
 const GAS_URL = localStorage.getItem('gasUrl') || GAS_URL_DEFAULT;
-
-let syncPending    = false; // trava global — impede push e pull simultâneos
+let syncTimer = null, syncPending = false;
 let autoSyncInterval = null;
-let dadosSujos     = localStorage.getItem('dadosSujos') === 'true'; // persiste entre sessões
+let dadosSujos = false; // true quando há alterações não sincronizadas
 
-// Chamado em todo saveData() — nunca dispara push
-function schedulePush() { /* intencional: push é sempre manual */ }
+// Push desativado — apenas manual via botão nas Configurações
+function schedulePush() { /* push automático desativado */ }
 
-// ── Marca dados como não sincronizados (chamado pelo saveData)
+function iniciarAutoSync() {
+  if(!GAS_URL) return;
+  pararAutoSync();
+  pullFromSheets(); // pull ao fazer login (dados ainda limpos)
+  autoSyncInterval = setInterval(() => {
+    // Pull automático só roda se não há alterações locais pendentes
+    // Evita sobrescrever dados recém-salvos que ainda não foram ao Sheets
+    if(!dadosSujos) pullFromSheets(false, true); // silencioso
+  }, 2 * 60 * 1000);
+  console.log('🔄 AutoSync iniciado — pull a cada 2 min (somente se limpo)');
+}
+
+// Para o ciclo ao fazer logout
+function pararAutoSync() {
+  if(autoSyncInterval) {
+    clearInterval(autoSyncInterval);
+    autoSyncInterval = null;
+  }
+}
+async function pushToSheets() {
+  if(!GAS_URL||syncPending) return; syncPending=true; showSyncBadge('syncing');
+  try {
+    const r = await fetch(GAS_URL, { method:'POST', body: JSON.stringify({
+      action:'push',
+      jovens, frequencias, recuperacoes, departamentos, lideres,
+      historicoMensal, metas, regras, atividades, liderSupremo,
+      usuario: document.getElementById('userName')?.textContent || 'Dashboard',
+    }) });
+    const d = await r.json(); showSyncBadge(d.ok?'ok':'error');
+  } catch(e) { showSyncBadge('error'); } finally { syncPending=false; }
+}
+async function pullFromSheets(forcar=false, silencioso=false) {
+  if(!GAS_URL) return;
+
+  // Pull automático (silencioso): NUNCA roda com dados sujos
+  if(silencioso && dadosSujos) return;
+
+  // Pull manual com dados não salvos: pergunta antes de sobrescrever
+  if(!forcar && !silencioso && dadosSujos) {
+    const ok = confirm(
+      '⚠️ Você tem alterações não sincronizadas!\n\n' +
+      'Se puxar agora, suas alterações locais serão perdidas.\n\n' +
+      'OK = descartar e puxar da planilha\n' +
+      'Cancelar = voltar e clicar ☁️ Salvar primeiro.'
+    );
+    if(!ok) return;
+  }
+
+  if(!silencioso) showSyncBadge('syncing');
+  try {
+    const r = await fetch(GAS_URL+'?action=pull'); const d = await r.json();
+    if(d.jovens)          { jovens=d.jovens;                       localStorage.setItem('jovens',JSON.stringify(jovens)); }
+    if(d.frequencias)     { frequencias=d.frequencias;             localStorage.setItem('frequencias',JSON.stringify(frequencias)); }
+    if(d.recuperacoes)    { recuperacoes=d.recuperacoes;           localStorage.setItem('recuperacoes',JSON.stringify(recuperacoes)); }
+    if(d.departamentos)   { departamentos=d.departamentos;         localStorage.setItem('departamentos',JSON.stringify(departamentos)); }
+    if(d.lideres)         { lideres=d.lideres;                     localStorage.setItem('lideres',JSON.stringify(lideres)); }
+    if(d.historicoMensal) { historicoMensal=d.historicoMensal;     localStorage.setItem('historicoMensal',JSON.stringify(historicoMensal)); }
+    if(d.metas)           { metas=d.metas;                         localStorage.setItem('metas',JSON.stringify(metas)); }
+    if(d.regras)          { regras=d.regras;                       localStorage.setItem('regras',JSON.stringify(regras)); }
+    if(d.atividades)      { atividades=d.atividades;               localStorage.setItem('atividades',JSON.stringify(atividades)); }
+    if(d.liderSupremo)    { liderSupremo=d.liderSupremo;           localStorage.setItem('liderSupremo',JSON.stringify(liderSupremo)); }
+    dadosSujos = false; limparAvisoPendente();
+    if(!silencioso) showSyncBadge('ok');
+    if(silencioso) renderAll(); // atualiza tela no pull automático
+  } catch(e) { if(!silencioso) showSyncBadge('offline'); }
+}
 function marcarDadosSujos() {
   dadosSujos = true;
-  localStorage.setItem('dadosSujos', 'true');
   const btn = document.getElementById('btnSyncManual');
   if(btn && !btn.disabled) {
     btn.textContent = '🔴 Salvar agora';
@@ -1329,161 +1385,14 @@ function marcarDadosSujos() {
   if(cfg) { cfg.textContent = '🔴 Não salvo'; cfg.style.color = 'var(--red)'; }
 }
 
-// ── Limpa o aviso após push bem-sucedido
 function limparAvisoPendente() {
   dadosSujos = false;
-  localStorage.setItem('dadosSujos', 'false');
   const btn = document.getElementById('btnSyncManual');
   if(btn) {
-    btn.textContent      = '☁️ Salvar';
     btn.style.background = 'rgba(59,130,246,0.12)';
     btn.style.color      = '#3B82F6';
     btn.style.border     = '1px solid rgba(59,130,246,0.3)';
-    btn.style.opacity    = '1';
-    btn.disabled         = false;
   }
-}
-
-// ── PUSH manual — acionado apenas pelo botão ☁️ Salvar
-async function syncManual() {
-  if(!GAS_URL || syncPending) return;
-  syncPending = true;
-  showSyncBadge('syncing');
-
-  const payload = JSON.stringify({
-    action: 'push',
-    jovens, frequencias, recuperacoes, departamentos, lideres,
-    historicoMensal, metas, regras, atividades, liderSupremo,
-    usuario: document.getElementById('userName')?.textContent || 'Dashboard',
-  });
-
-  try {
-    // mode: 'no-cors' — o browser envia o POST sem preflight e sem bloquear
-    // Não conseguimos ler a resposta, mas se não lançar exceção = chegou no GAS
-    await fetch(GAS_URL, {
-      method: 'POST',
-      body: payload,
-      mode: 'no-cors',
-      headers: { 'Content-Type': 'text/plain' },
-    });
-    // Chegou aqui = requisição enviada com sucesso
-    limparAvisoPendente();
-    showSyncBadge('ok');
-  } catch(e) {
-    // Só cai aqui se houver erro de rede real (sem internet, etc)
-    showSyncBadge('error');
-  } finally {
-    syncPending = false;
-  }
-}
-
-// ── PULL via JSONP — GET sem restrição de CORS
-// Regra: só roda se NÃO há dados sujos E NÃO há sync em andamento
-function pullFromSheets(forcar=false, silencioso=false) {
-  if(!GAS_URL) return Promise.resolve();
-
-  // Trava: nunca roda junto com push
-  if(syncPending) return Promise.resolve();
-
-  // Trava: nunca sobrescreve dados locais não sincronizados
-  if(dadosSujos) {
-    if(silencioso) return Promise.resolve(); // pull automático: simplesmente cancela
-    // Pull manual com dados sujos: pergunta antes
-    if(!forcar) {
-      const ok = confirm(
-        '⚠️ Você tem dados não sincronizados!\n\n' +
-        'Puxar agora vai descartar suas alterações locais.\n\n' +
-        'OK = descartar e puxar da planilha\n' +
-        'Cancelar = manter e clicar ☁️ Salvar primeiro'
-      );
-      if(!ok) return Promise.resolve();
-    }
-  }
-
-  if(!silencioso) showSyncBadge('syncing');
-  syncPending = true;
-
-  return new Promise((resolve) => {
-    const cbName = '__rujaPull_' + Date.now();
-    const script  = document.createElement('script');
-
-    const timeout = setTimeout(() => {
-      cleanup();
-      syncPending = false;
-      if(!silencioso) showSyncBadge('offline');
-      resolve();
-    }, 15000);
-
-    function cleanup() {
-      clearTimeout(timeout);
-      delete window[cbName];
-      if(script.parentNode) script.parentNode.removeChild(script);
-    }
-
-    window[cbName] = function(d) {
-      cleanup();
-      syncPending = false;
-      try {
-        if(d.jovens)          { jovens=d.jovens;               localStorage.setItem('jovens',JSON.stringify(jovens)); }
-        if(d.frequencias)     { frequencias=d.frequencias;     localStorage.setItem('frequencias',JSON.stringify(frequencias)); }
-        if(d.recuperacoes)    { recuperacoes=d.recuperacoes;   localStorage.setItem('recuperacoes',JSON.stringify(recuperacoes)); }
-        if(d.departamentos)   { departamentos=d.departamentos; localStorage.setItem('departamentos',JSON.stringify(departamentos)); }
-        if(d.lideres)         { lideres=d.lideres;             localStorage.setItem('lideres',JSON.stringify(lideres)); }
-        if(d.historicoMensal) { historicoMensal=d.historicoMensal; localStorage.setItem('historicoMensal',JSON.stringify(historicoMensal)); }
-        if(d.metas)           { metas=d.metas;                 localStorage.setItem('metas',JSON.stringify(metas)); }
-        if(d.regras)          { regras=d.regras;               localStorage.setItem('regras',JSON.stringify(regras)); }
-        if(d.atividades)      { atividades=d.atividades;       localStorage.setItem('atividades',JSON.stringify(atividades)); }
-        if(d.liderSupremo)    { liderSupremo=d.liderSupremo;   localStorage.setItem('liderSupremo',JSON.stringify(liderSupremo)); }
-        limparAvisoPendente();
-        if(!silencioso) showSyncBadge('ok');
-        else renderAll(); // pull automático silencioso ainda precisa atualizar a tela
-      } catch(e) {
-        if(!silencioso) showSyncBadge('error');
-      }
-      resolve();
-    };
-
-    script.src    = GAS_URL + '?callback=' + cbName;
-    script.onerror = () => {
-      cleanup(); syncPending = false;
-      if(!silencioso) showSyncBadge('offline');
-      resolve();
-    };
-    document.head.appendChild(script);
-  });
-}
-
-async function puxarManual() {
-  await pullFromSheets(false, false);
-  renderAll();
-  showToast('Dados atualizados!');
-}
-
-async function puxarForcado() {
-  await pullFromSheets(true, false);
-  renderAll();
-  showToast('Dados puxados da planilha!');
-}
-
-// ── AutoSync: pull a cada 2 min — mas só se tudo estiver limpo
-function iniciarAutoSync() {
-  if(!GAS_URL) return;
-  pararAutoSync();
-  // Pull no login só se não há dados pendentes
-  if(!dadosSujos) {
-    pullFromSheets(false, true);
-  } else {
-    // Já tem dados locais não sincronizados — avisa sem fazer pull
-    showSyncBadge('error');
-    marcarDadosSujos();
-  }
-  autoSyncInterval = setInterval(() => {
-    if(!dadosSujos && !syncPending) pullFromSheets(false, true);
-  }, 2 * 60 * 1000);
-}
-
-function pararAutoSync() {
-  if(autoSyncInterval) { clearInterval(autoSyncInterval); autoSyncInterval = null; }
 }
 
 function showSyncBadge(s) {
@@ -1517,6 +1426,21 @@ function showSyncBadge(s) {
   }
 }
 
+async function syncManual() {
+  if(syncPending) return;
+  showSyncBadge('syncing');
+  try {
+    const r = await fetch(GAS_URL, { method:'POST', body: JSON.stringify({
+      action:'push',
+      jovens, frequencias, recuperacoes, departamentos, lideres,
+      historicoMensal, metas, regras, atividades, liderSupremo,
+      usuario: document.getElementById('userName')?.textContent || 'Dashboard',
+    }) });
+    const d = await r.json();
+    if(d.ok) { dadosSujos = false; limparAvisoPendente(); }
+    showSyncBadge(d.ok ? 'ok' : 'error');
+  } catch(e) { showSyncBadge('error'); }
+}
 function saveGasUrl() {
   const u=document.getElementById('gasUrlInput').value.trim();
   if(!u.startsWith('https://script.google.com')) return alert('URL inválida.');
@@ -2383,61 +2307,115 @@ function renderAniversarios() {
   const hoje = new Date();
   const mesAtual = hoje.getMonth();
 
-  // Filtra jovens com data de nascimento
-  let lista = jovens.filter(j=>j.dataNasc).map(j=>({
-    ...j, dias: getDiasParaAniversario(j.dataNasc), idade: getIdade(j.dataNasc)
+  // ── Lista de jovens com data
+  const listaJovens = jovens.filter(j=>j.dataNasc).map(j=>({
+    ...j, _tipo:'jovem', dias: getDiasParaAniversario(j.dataNasc), idade: getIdade(j.dataNasc)
   })).sort((a,b)=>a.dias-b.dias);
 
-  // KPIs
-  const esteMes  = lista.filter(j=>{ const [y,m] = (j.dataNasc||'').split('-'); return parseInt(m)-1===mesAtual; }).length;
-  const proximos = lista.filter(j=>j.dias<=30).length;
-  const semData  = jovens.filter(j=>!j.dataNasc).length;
+  // ── Lista de líderes com data
+  const listaLideres = lideres.filter(l=>l.dataNasc).map(l=>({
+    ...l, _tipo:'lider', dias: getDiasParaAniversario(l.dataNasc), idade: getIdade(l.dataNasc),
+    departamento: l.departamento || 'Geral', lider: l.funcao || 'Líder',
+  })).sort((a,b)=>a.dias-b.dias);
+
+  // ── KPIs (somados)
+  const todos       = [...listaJovens, ...listaLideres];
+  const esteMes     = todos.filter(x=>{ const [,m]=(x.dataNasc||'').split('-'); return parseInt(m)-1===mesAtual; }).length;
+  const proximos    = todos.filter(x=>x.dias<=30).length;
+  const semDataJ    = jovens.filter(j=>!j.dataNasc).length;
+  const semDataL    = lideres.filter(l=>!l.dataNasc).length;
 
   document.getElementById('anivKpis').innerHTML = [
-    { label:'🎂 Este Mês',         value:esteMes,  cls:'blue'   },
-    { label:'📅 Próximos 30 dias', value:proximos, cls:'green'  },
-    { label:'⚠️ Sem Data Cadastrada', value:semData, cls:'red' },
+    { label:'🎂 Este Mês',              value:esteMes,           cls:'blue'  },
+    { label:'📅 Próximos 30 dias',      value:proximos,          cls:'green' },
+    { label:'⚠️ Jovens sem data',       value:semDataJ,          cls:'red'   },
+    { label:'⚠️ Líderes sem data',      value:semDataL,          cls:'orange'},
   ].map(k=>`<div class="kpi-card"><div class="kpi-label">${k.label}</div><div class="kpi-value ${k.cls}">${k.value}</div></div>`).join('');
 
-  // Filtra por tab
-  if(activeAnivTab==='mes')      lista = lista.filter(j=>{ const [y,m]=(j.dataNasc||'').split('-'); return parseInt(m)-1===mesAtual; });
-  else if(activeAnivTab==='proximos') lista = lista.filter(j=>j.dias<=30);
+  // ── Aplica filtro de tab
+  function aplicarFiltro(lista) {
+    if(activeAnivTab==='mes')      return lista.filter(x=>{ const [,m]=(x.dataNasc||'').split('-'); return parseInt(m)-1===mesAtual; });
+    if(activeAnivTab==='proximos') return lista.filter(x=>x.dias<=30);
+    return lista;
+  }
+  const jovensVis  = aplicarFiltro(listaJovens);
+  const lideresVis = aplicarFiltro(listaLideres);
 
-  document.getElementById('anivLista').innerHTML = lista.length
-    ? lista.map(j=>{
-        const cor = getAvatarColor(j.nome);
-        const [y,m,d] = (j.dataNasc||'--').split('-');
-        const meses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
-        const dataStr = m&&d ? `${d}/${meses[parseInt(m)-1]}` : '—';
-        const diasStr = j.dias===0 ? '🎉 Hoje!' : j.dias===1 ? 'Amanhã' : `em ${j.dias} dias`;
-        const cor2 = j.dias===0?'var(--blue)':j.dias<=7?'var(--green)':'var(--text3)';
-        return `
-          <div class="aniv-card" onclick="selecionarAniversariante(${j.id})" style="cursor:pointer;${anivSelecionado===j.id?'border-color:rgba(59,130,246,0.5);background:rgba(59,130,246,0.05)':''}">
-            <div class="aniv-avatar" style="background:${cor};color:#fff">${j.nome.charAt(0)}</div>
-            <div class="aniv-info">
-              <div class="aniv-nome">${j.nome}</div>
-              <div class="aniv-data">📅 ${dataStr} · ${j.idade?j.idade+' anos':''} · ${j.departamento ? j.departamento.replace(/;/g,' · ') : 'Sem departamento'}</div>
-            </div>
-            <div class="aniv-dias" style="color:${cor2}">${diasStr}</div>
-          </div>`;
-      }).join('')
-    : `<div class="empty-state"><div class="icon">🎂</div><p>Nenhum aniversariante${activeAnivTab==='mes'?' este mês':activeAnivTab==='proximos'?' nos próximos 30 dias':''}</p></div>`;
+  // ── Render de um card
+  function cardAniversario(x) {
+    const cor     = getAvatarColor(x.nome);
+    const [,m,d]  = (x.dataNasc||'--').split('-');
+    const meses   = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+    const dataStr = m&&d ? `${d}/${meses[parseInt(m)-1]}` : '—';
+    const diasStr = x.dias===0 ? '🎉 Hoje!' : x.dias===1 ? 'Amanhã' : `em ${x.dias} dias`;
+    const corDias = x.dias===0?'var(--blue)':x.dias<=7?'var(--green)':'var(--text3)';
+    const sub     = x._tipo==='lider'
+      ? `${x.funcao||'Líder'} · ${x.departamento||'Geral'}`
+      : `${x.idade?x.idade+' anos':''} · ${x.departamento ? x.departamento.replace(/;/g,' · ') : 'Sem departamento'}`;
+    const selecionado = anivSelecionado===x.id && anivSelecionadoTipo===x._tipo;
+    return `
+      <div class="aniv-card" onclick="selecionarAniversariante(${x.id},'${x._tipo}')" style="cursor:pointer;${selecionado?'border-color:rgba(59,130,246,0.5);background:rgba(59,130,246,0.05)':''}">
+        <div class="aniv-avatar" style="background:${cor};color:#fff">${x.nome.charAt(0)}</div>
+        <div class="aniv-info">
+          <div class="aniv-nome">${x.nome}${x._tipo==='lider'?` <span style="font-size:10px;padding:2px 7px;background:rgba(245,158,11,0.15);color:var(--yellow);border-radius:20px;font-weight:700">LÍDER</span>`:''}</div>
+          <div class="aniv-data">📅 ${dataStr} · ${sub}</div>
+        </div>
+        <div class="aniv-dias" style="color:${corDias}">${diasStr}</div>
+      </div>`;
+  }
 
+  // ── Monta HTML com seções separadas
+  let html = '';
+
+  // Seção Líderes
+  if(lideresVis.length) {
+    html += `<div style="font-size:11px;font-weight:700;color:var(--yellow);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:8px"><span>⭐ Líderes & Pastores</span><span style="font-size:10px;padding:2px 8px;background:rgba(245,158,11,0.12);border-radius:20px;font-weight:600">${lideresVis.length}</span></div>`;
+    html += lideresVis.map(cardAniversario).join('');
+  }
+
+  // Seção Jovens
+  if(jovensVis.length) {
+    if(lideresVis.length) html += `<div style="height:1px;background:var(--border);margin:16px 0"></div>`;
+    html += `<div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:8px"><span>👥 Jovens</span><span style="font-size:10px;padding:2px 8px;background:rgba(255,255,255,0.06);border-radius:20px;font-weight:600">${jovensVis.length}</span></div>`;
+    html += jovensVis.map(cardAniversario).join('');
+  }
+
+  if(!html) {
+    const sufixo = activeAnivTab==='mes'?' este mês':activeAnivTab==='proximos'?' nos próximos 30 dias':'';
+    html = `<div class="empty-state"><div class="icon">🎂</div><p>Nenhum aniversariante${sufixo}</p></div>`;
+  }
+
+  document.getElementById('anivLista').innerHTML = html;
   atualizarMsgPreview();
 }
 
-function selecionarAniversariante(id) {
-  anivSelecionado = id;
+let anivSelecionadoTipo = 'jovem';
+
+function selecionarAniversariante(id, tipo='jovem') {
+  anivSelecionado     = id;
+  anivSelecionadoTipo = tipo;
   renderAniversarios();
   atualizarMsgPreview();
 }
 
-function getMsgAniversario(jovem) {
-  if(!jovem) return 'Selecione um aniversariante para ver a mensagem';
+function _getPessoa() {
+  if(!anivSelecionado) return null;
+  if(anivSelecionadoTipo === 'lider') {
+    const l = lideres.find(x=>x.id===anivSelecionado);
+    return l ? {...l, _tipo:'lider'} : null;
+  }
+  const j = jovens.find(x=>x.id===anivSelecionado);
+  return j ? {...j, _tipo:'jovem'} : null;
+}
+
+function getMsgAniversario(pessoa) {
+  if(!pessoa) return 'Selecione um aniversariante para ver a mensagem';
   const citacaoKey = document.getElementById('anivCitacao')?.value || 'Jeremias 29:11';
   const citacao = CITACOES[citacaoKey] || '';
-  const idade = getIdade(jovem.dataNasc);
-  return `🎉 *Feliz Aniversário, ${jovem.nome}!* 🎂
+  const titulo = pessoa._tipo === 'lider' && pessoa.funcao
+    ? pessoa.funcao + ' ' + pessoa.nome
+    : pessoa.nome;
+  return `🎉 *Feliz Aniversário, ${titulo}!* 🎂
 
 Que o Senhor te abençoe grandemente neste novo ano de vida!
 
@@ -2450,28 +2428,24 @@ Com amor,
 }
 
 function atualizarMsgPreview() {
-  const jovem = anivSelecionado ? jovens.find(j=>j.id===anivSelecionado) : null;
   const prev = document.getElementById('anivMsgPreview');
-  if(prev) prev.textContent = getMsgAniversario(jovem);
+  if(prev) prev.textContent = getMsgAniversario(_getPessoa());
 }
 
 function enviarMsgAniversario() {
   if(!anivSelecionado) return alert('Selecione um aniversariante na lista primeiro.');
-  const jovem = jovens.find(j=>j.id===anivSelecionado);
-  if(!jovem) return;
-  if(!jovem.contato) return alert('Este jovem não tem WhatsApp cadastrado.');
-  const msg = getMsgAniversario(jovem);
-  const tel = jovem.contato.replace(/\D/g,'');
-  const url = `https://wa.me/55${tel}?text=${encodeURIComponent(msg)}`;
-  window.open(url, '_blank');
+  const pessoa = _getPessoa();
+  if(!pessoa) return;
+  if(!pessoa.contato) return alert('Este cadastro não tem WhatsApp registrado.');
+  const msg = getMsgAniversario(pessoa);
+  const tel = pessoa.contato.replace(/\D/g,'');
+  window.open(`https://wa.me/55${tel}?text=${encodeURIComponent(msg)}`, '_blank');
 }
 
 function copiarMsgAniversario() {
   if(!anivSelecionado) return alert('Selecione um aniversariante primeiro.');
-  const jovem = jovens.find(j=>j.id===anivSelecionado);
-  const msg = getMsgAniversario(jovem);
+  const msg = getMsgAniversario(_getPessoa());
   navigator.clipboard.writeText(msg).then(()=>showToast('Mensagem copiada!')).catch(()=>{
-    // fallback
     const ta = document.createElement('textarea');
     ta.value = msg; document.body.appendChild(ta);
     ta.select(); document.execCommand('copy');
@@ -2495,14 +2469,10 @@ function doLogin() {
   document.getElementById('userName').textContent=u;
   document.getElementById('userRole').textContent=r;
   document.getElementById('userAvatar').textContent=u.charAt(0).toUpperCase();
-
-  // Renderiza imediatamente com dados do localStorage
-  renderAll();
-  iniciarAutoSync();
-
-  if(dadosSujos) {
-    showToast('⚠️ Dados locais não sincronizados — clique ☁️ Salvar');
-  }
+  // Pull para pegar dados mais recentes, depois inicia o ciclo automático
+  pullFromSheets()
+    .then(()=>{ renderAll(); iniciarAutoSync(); })
+    .catch(()=>{ renderAll(); iniciarAutoSync(); });
 }
 function doLogout() {
   pararAutoSync(); // cancela o push automático ao sair
@@ -3512,6 +3482,7 @@ function saveLider() {
     contato:     document.getElementById('lContato').value.trim(),
     departamento:document.getElementById('lDepartamento').value,
     funcao:      document.getElementById('lFuncao').value.trim(),
+    dataNasc:    dateToISO(document.getElementById('lDataNasc').value) || document.getElementById('lDataNasc').value,
   };
   if(!val.nome) return alert('Preencha o nome do líder.');
 
@@ -3523,15 +3494,11 @@ function saveLider() {
       deptoAntigo = lideres[i].departamento || '';
       const nomeAntigo = lideres[i].nome;
 
-      // Se o departamento mudou, limpa o líder nos jovens do depto antigo
-      if(deptoAntigo && deptoAntigo !== val.departamento) {
+      if(deptoAntigo && deptoAntigo !== val.departamento)
         sincronizarLiderNosJovens(deptoAntigo, '', nomeAntigo);
-      }
 
-      // Se o nome do líder mudou, atualiza referências nos jovens
-      if(nomeAntigo !== val.nome && deptoAntigo) {
+      if(nomeAntigo !== val.nome && deptoAntigo)
         sincronizarLiderNosJovens(deptoAntigo, val.nome, nomeAntigo);
-      }
 
       lideres[i] = {...lideres[i], ...val};
     }
@@ -3542,7 +3509,6 @@ function saveLider() {
 
   editingLiderId = null;
 
-  // Aplica novo líder nos jovens do departamento selecionado
   if(val.departamento) {
     const n = sincronizarLiderNosJovens(val.departamento, val.nome, '');
     if(n > 0) showToast(`Líder salvo! ${n} jovem(ns) de "${val.departamento}" atualizados.`);
@@ -3554,7 +3520,7 @@ function saveLider() {
   saveData(); closeModal('modalLider'); renderLideres();
   if(currentPage==='jovens') renderJovens();
   if(currentPage==='departamentos') renderDepartamentos();
-  // Push imediato para garantir que o líder seja salvo na planilha antes de qualquer pull
+  if(currentPage==='aniversarios') renderAniversarios();
 }
 
 function editLider(id) {
@@ -3566,6 +3532,7 @@ function editLider(id) {
     document.getElementById('lContato').value=l.contato;
     document.getElementById('lDepartamento').value=l.departamento||'';
     document.getElementById('lFuncao').value=l.funcao||'';
+    document.getElementById('lDataNasc').value=dateFromISO(l.dataNasc)||'';
     document.getElementById('modalLiderTitle').textContent='Editar Líder';
   },50);
 }
