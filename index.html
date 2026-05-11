@@ -1294,9 +1294,8 @@ td.mono { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight
 // ═══════════════════════════════════════════════
 // CONFIG & GAS SYNC
 // ═══════════════════════════════════════════════
-const GAS_URL_DEFAULT = 'https://script.google.com/macros/s/AKfycbybKnnsOLHFjh_ft0I9p0FsD43utVxRtqMYgDB0xfzL1gM3AwFG-vXfGrVQq8WkQ8FL/exec';
-if (!localStorage.getItem('gasUrl')) localStorage.setItem('gasUrl', GAS_URL_DEFAULT);
-const GAS_URL = localStorage.getItem('gasUrl') || GAS_URL_DEFAULT;
+// GAS_URL configurada via interface (Configurações) — nunca hardcoded no código
+const GAS_URL = localStorage.getItem('gasUrl') || '';
 let syncTimer = null, syncPending = false;
 let autoSyncInterval = null;
 let dadosSujos = false; // true quando há alterações não sincronizadas
@@ -1514,6 +1513,14 @@ function calcStatus(jovemId) {
 }
 
 function saveData() {
+  // Remove registros inválidos antes de salvar (evita linhas em branco no Sheets)
+  jovens        = jovens.filter(j => j && j.id && j.nome && j.nome.trim());
+  lideres       = lideres.filter(l => l && l.id && l.nome && l.nome.trim());
+  departamentos = departamentos.filter(d => d && d.id && d.nome && d.nome.trim());
+  frequencias   = frequencias.filter(f => f && f.id && f.jovemId);
+  recuperacoes  = recuperacoes.filter(r => r && r.id && r.jovemId);
+  atividades    = atividades.filter(a => a && a.id && a.titulo && a.titulo.trim());
+
   localStorage.setItem('jovens',JSON.stringify(jovens));
   localStorage.setItem('frequencias',JSON.stringify(frequencias));
   localStorage.setItem('recuperacoes',JSON.stringify(recuperacoes));
