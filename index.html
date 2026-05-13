@@ -399,14 +399,21 @@ td.mono { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight
       <div class="login-sub">Rede UniJovem ADJA — Painel de Gestão</div>
     </div>
     <div class="form-group">
-      <label class="form-label">Seu nome</label>
-      <input type="text" class="form-input" id="loginUser" placeholder="Ex: Pastor João" onkeydown="if(event.key==='Enter')doLogin()">
+      <label class="form-label">E-mail</label>
+      <input type="email" class="form-input" id="loginEmail" placeholder="seu@email.com" onkeydown="if(event.key==='Enter')doLogin()" autocomplete="email">
     </div>
     <div class="form-group">
-      <label class="form-label">Função</label>
-      <input type="text" class="form-input" id="loginRole" placeholder="Ex: Líder de Mídia, Pastor, Secretário..." onkeydown="if(event.key==='Enter')doLogin()">
+      <label class="form-label">Senha</label>
+      <div style="position:relative">
+        <input type="password" class="form-input" id="loginPassword" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()" autocomplete="current-password" style="padding-right:44px">
+        <button onclick="toggleSenha()" type="button" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text3);font-size:16px" id="toggleSenhaBtn">👁️</button>
+      </div>
     </div>
-    <button class="login-btn" onclick="doLogin()">🦁 Entrar no Painel</button>
+    <div id="loginError" style="display:none;background:rgba(212,43,43,0.12);border:1px solid rgba(212,43,43,0.3);border-radius:8px;padding:10px 14px;font-size:13px;color:var(--red);margin-bottom:4px"></div>
+    <button class="login-btn" onclick="doLogin()" id="loginBtn">🦁 Entrar no Painel</button>
+    <div style="text-align:center;margin-top:14px">
+      <button onclick="esqueceuSenha()" type="button" style="background:none;border:none;color:var(--text3);font-size:12px;cursor:pointer;text-decoration:underline">Esqueci minha senha</button>
+    </div>
   </div>
 </div>
 
@@ -1294,6 +1301,54 @@ td.mono { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight
 // ═══════════════════════════════════════════════
 // CONFIG & GAS SYNC
 // ═══════════════════════════════════════════════
+// ═══════════════════════════════════════════════
+// SUPABASE AUTH
+// ═══════════════════════════════════════════════
+const _SB_URL = 'https://wjdnemfifgquuonwwaua.supabase.co';
+const _SB_KEY = 'sb_publishable_Qcg3wmK3zXaNYvwt90QUkw_IbUerToD';
+const { createClient } = supabase;
+const sb = createClient(_SB_URL, _SB_KEY);
+
+// Verifica sessão ativa ao carregar
+(async function() {
+  const { data: { session } } = await sb.auth.getSession();
+  if(session) {
+    const user = session.user;
+    const meta = user.user_metadata || {};
+    const nome = meta.nome || user.email.split('@')[0];
+    const funcao = meta.funcao || 'Líder';
+    mostrarApp(nome, funcao);
+  }
+})();
+
+function toggleSenha() {
+  const inp = document.getElementById('loginPassword');
+  const btn = document.getElementById('toggleSenhaBtn');
+  if(inp.type === 'password') { inp.type = 'text'; btn.textContent = '🙈'; }
+  else { inp.type = 'password'; btn.textContent = '👁️'; }
+}
+
+function mostrarErroLogin(msg) {
+  const el = document.getElementById('loginError');
+  if(el) { el.textContent = msg; el.style.display = 'block'; }
+}
+
+function ocultarErroLogin() {
+  const el = document.getElementById('loginError');
+  if(el) el.style.display = 'none';
+}
+
+function mostrarApp(nome, funcao) {
+  document.getElementById('loginPage').style.display = 'none';
+  document.getElementById('appShell').style.display = 'flex';
+  document.getElementById('userName').textContent = nome;
+  document.getElementById('userRole').textContent = funcao;
+  document.getElementById('userAvatar').textContent = nome.charAt(0).toUpperCase();
+  pullFromSheets()
+    .then(()=>{ renderAll(); iniciarAutoSync(); })
+    .catch(()=>{ renderAll(); iniciarAutoSync(); });
+}
+
 // GAS_URL configurada via interface (Configurações) — nunca hardcoded no código
 const GAS_URL = localStorage.getItem('gasUrl') || '';
 let syncTimer = null, syncPending = false;
@@ -2468,23 +2523,68 @@ function showToast(msg) {
 // ═══════════════════════════════════════════════
 // LOGIN / LOGOUT / NAV
 // ═══════════════════════════════════════════════
-function doLogin() {
-  const u=document.getElementById('loginUser').value.trim()||'Líder';
-  const r=document.getElementById('loginRole').value;
-  document.getElementById('loginPage').style.display='none';
-  document.getElementById('appShell').style.display='flex';
-  document.getElementById('userName').textContent=u;
-  document.getElementById('userRole').textContent=r;
-  document.getElementById('userAvatar').textContent=u.charAt(0).toUpperCase();
-  // Pull para pegar dados mais recentes, depois inicia o ciclo automático
-  pullFromSheets()
-    .then(()=>{ renderAll(); iniciarAutoSync(); })
-    .catch(()=>{ renderAll(); iniciarAutoSync(); });
+async function doLogin() {
+  const email    = (document.getElementById('loginEmail').value||'').trim();
+  const password = document.getElementById('loginPassword').value||'';
+  const btn      = document.getElementById('loginBtn');
+
+  ocultarErroLogin();
+
+  if(!email || !password) {
+    mostrarErroLogin('Preencha e-mail e senha.');
+    return;
+  }
+
+  btn.textContent = '🔄 Entrando…';
+  btn.disabled    = true;
+
+  const { data, error } = await sb.auth.signInWithPassword({ email, password });
+
+  btn.textContent = '🦁 Entrar no Painel';
+  btn.disabled    = false;
+
+  if(error) {
+    const msgs = {
+      'Invalid login credentials': 'E-mail ou senha incorretos.',
+      'Email not confirmed':       'Confirme seu e-mail antes de entrar.',
+      'Too many requests':         'Muitas tentativas. Aguarde alguns minutos.',
+    };
+    mostrarErroLogin(msgs[error.message] || 'Erro ao entrar: ' + error.message);
+    return;
+  }
+
+  const user  = data.user;
+  const meta  = user.user_metadata || {};
+  const nome  = meta.nome  || user.email.split('@')[0];
+  const funcao= meta.funcao|| 'Líder';
+  mostrarApp(nome, funcao);
 }
-function doLogout() {
-  pararAutoSync(); // cancela o push automático ao sair
-  document.getElementById('loginPage').style.display='flex';
-  document.getElementById('appShell').style.display='none';
+
+async function doLogout() {
+  pararAutoSync();
+  await sb.auth.signOut();
+  document.getElementById('loginPage').style.display  = 'flex';
+  document.getElementById('appShell').style.display   = 'none';
+  document.getElementById('loginEmail').value          = '';
+  document.getElementById('loginPassword').value       = '';
+  ocultarErroLogin();
+}
+
+async function esqueceuSenha() {
+  const email = (document.getElementById('loginEmail').value||'').trim();
+  if(!email) {
+    mostrarErroLogin('Digite seu e-mail no campo acima para recuperar a senha.');
+    return;
+  }
+  const { error } = await sb.auth.resetPasswordForEmail(email, {
+    redirectTo: window.location.origin,
+  });
+  if(error) {
+    mostrarErroLogin('Erro ao enviar e-mail: ' + error.message);
+  } else {
+    ocultarErroLogin();
+    alert('✅ E-mail de recuperação enviado para ' + email + '!\nVerifique sua caixa de entrada.');
+  }
 }
 function navigate(page,el) {
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
