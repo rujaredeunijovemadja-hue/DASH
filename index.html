@@ -584,6 +584,21 @@ td.mono { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight
       <div class="page" id="page-atividades">
         <div class="kpi-grid" style="margin-bottom:20px" id="ativKpis"></div>
 
+        <!-- Link público -->
+        <div style="display:flex;align-items:center;justify-content:space-between;background:linear-gradient(135deg,var(--card) 0%,rgba(212,43,43,0.06) 100%);border:1px solid var(--border2);border-radius:12px;padding:14px 20px;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+          <div style="display:flex;align-items:center;gap:12px">
+            <span style="font-size:22px">🌐</span>
+            <div>
+              <div style="font-size:13px;font-weight:700">Agenda Pública da RUJA</div>
+              <div style="font-size:11px;color:var(--text3)">Compartilhe com os jovens — sem precisar de login</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-ghost btn-sm" onclick="copiarLinkPublico()" title="Copiar link">📋 Copiar link</button>
+            <a href="https://ruja-app.lovable.app/" target="_blank" class="btn btn-primary btn-sm" style="text-decoration:none;display:flex;align-items:center;gap:6px">🔗 Ver agenda pública</a>
+          </div>
+        </div>
+
         <!-- Alertas de cancelamento -->
         <div id="ativAlertas" style="margin-bottom:16px"></div>
 
@@ -1836,6 +1851,16 @@ const HIER_LABEL = {
 };
 const STATUS_COR = { aprovado:'green', pendente:'yellow', cancelado:'red' };
 const STATUS_LABEL = { aprovado:'✅ Aprovado', pendente:'⏳ Pendente', cancelado:'❌ Cancelado' };
+
+function copiarLinkPublico() {
+  const url = 'https://ruja-app.lovable.app/';
+  navigator.clipboard.writeText(url).then(()=>showToast('Link copiado!')).catch(()=>{
+    const ta = document.createElement('textarea');
+    ta.value = url; document.body.appendChild(ta);
+    ta.select(); document.execCommand('copy');
+    document.body.removeChild(ta); showToast('Link copiado!');
+  });
+}
 
 function switchAtivTab(tab, el) {
   activeAtivTab = tab;
