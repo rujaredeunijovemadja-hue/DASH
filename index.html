@@ -2522,12 +2522,10 @@ let activeDeptoTab = 'resumo';
 
 function switchDeptoTab(tab, el) {
   activeDeptoTab = tab;
-  document.querySelectorAll('#tabDeptoResumo, #tabDeptoJovens').forEach(t => {
-    if(t) t.style.display = 'none';
-  });
-  document.querySelectorAll('#deptoTabResumo, #deptoTabJovens').forEach(t => {
-    if(t) t.style.display = 'none';
-  });
+  // Esconde apenas as divs de conteúdo, não os botões
+  document.getElementById('deptoTabResumo').style.display = 'none';
+  document.getElementById('deptoTabJovens').style.display = 'none';
+  // Atualiza estado ativo dos botões
   document.querySelectorAll('[id^="tabDepto"]').forEach(t => t.classList.remove('active'));
   if(el) el.classList.add('active');
   if(tab === 'resumo') {
