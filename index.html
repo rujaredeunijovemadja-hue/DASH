@@ -691,6 +691,7 @@ td.mono { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight
           <button class="filter-tab"        id="freqFiltroTeens"   onclick="setFreqFiltro('Teens',this)">🧒 Teens</button>
           <button class="filter-tab"        id="freqFiltroSimply"  onclick="setFreqFiltro('Simply',this)">😎 Simply</button>
           <button class="filter-tab"        id="freqFiltroUp"      onclick="setFreqFiltro('Up',this)">🔥 Up</button>
+          <button class="filter-tab"        id="freqFiltroSemDepto" onclick="setFreqFiltro('SemDepto',this)">⚠️ Sem Depto</button>
         </div>
 
         <div class="table-wrap">
@@ -1034,6 +1035,7 @@ td.mono { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight
         <button class="filter-tab"        id="fCtxTeens"   onclick="setFreqContexto('Teens',this)">🧒 Teens</button>
         <button class="filter-tab"        id="fCtxSimply"  onclick="setFreqContexto('Simply',this)">😎 Simply</button>
         <button class="filter-tab"        id="fCtxUp"      onclick="setFreqContexto('Up',this)">🔥 Up</button>
+        <button class="filter-tab"        id="fCtxSemDepto" onclick="setFreqContexto('SemDepto',this)">⚠️ Sem Depto</button>
       </div>
     </div>
 
@@ -2478,13 +2480,15 @@ function setFreqFiltro(ctx, el) {
 }
 
 function renderFrequencia() {
-  // Todos = todos os jovens; Teens/Simply/Up = filtra pelo departamento
+  // Todos = todos | SemDepto = sem departamento | grupos = por departamento
   let listaJovens = freqFiltroAtual === 'Todos'
     ? [...jovens]
-    : jovens.filter(j => j.departamento && j.departamento.split(';').map(d=>d.trim()).includes(freqFiltroAtual));
+    : freqFiltroAtual === 'SemDepto'
+      ? jovens.filter(j => !j.departamento || !j.departamento.trim())
+      : jovens.filter(j => j.departamento && j.departamento.split(';').map(d=>d.trim()).includes(freqFiltroAtual));
 
-  // Frequências: Todos considera tudo; grupos consideram do grupo + Geral
-  const freqFiltradas = freqFiltroAtual === 'Todos'
+  // Frequências: Todos/SemDepto considera tudo; grupos consideram do grupo + Geral
+  const freqFiltradas = (freqFiltroAtual === 'Todos' || freqFiltroAtual === 'SemDepto')
     ? frequencias
     : frequencias.filter(f => !f.contexto || f.contexto === freqFiltroAtual || f.contexto === 'Geral');
 
@@ -2892,10 +2896,11 @@ function deleteJovem(id) {
 // FREQUÊNCIA — NOVO SISTEMA POR CONTEXTO
 // ═══════════════════════════════════════════════
 const FREQ_EVENTOS = {
-  Geral:  ['Conexão','Sextou na 19','Reunião Geral','Chega Mais','Aniversário','✏️ Outro evento...'],
-  Teens:  ['Office','Confraternização','Saídas para Igrejas Amigas','EBD','✏️ Outro evento...'],
-  Simply: ['Office','Confraternização','Saídas para Igrejas Amigas','EBD','✏️ Outro evento...'],
-  Up:     ['Office','Confraternização','Saídas para Igrejas Amigas','✏️ Outro evento...'],
+  Geral:    ['Conexão','Sextou na 19','Reunião Geral','Chega Mais','Aniversário','✏️ Outro evento...'],
+  Teens:    ['Office','Confraternização','Saídas para Igrejas Amigas','EBD','✏️ Outro evento...'],
+  Simply:   ['Office','Confraternização','Saídas para Igrejas Amigas','EBD','✏️ Outro evento...'],
+  Up:       ['Office','Confraternização','Saídas para Igrejas Amigas','✏️ Outro evento...'],
+  SemDepto: ['Conexão','Sextou na 19','Reunião Geral','Chega Mais','✏️ Outro evento...'],
 };
 
 let freqContextoAtual = 'Geral';
@@ -2921,11 +2926,12 @@ function onFreqEventoChange(sel) {
 function renderFreqJovens() {
   const ctx = freqContextoAtual;
 
-  // Geral = todos os jovens (é tipo de evento, não filtro de grupo)
-  // Teens/Simply/Up = filtra pelo departamento
-  let lista = (ctx === 'Geral')
+  // Geral = todos os jovens | SemDepto = sem departamento | grupos = por departamento
+  let lista = ctx === 'Geral'
     ? [...jovens]
-    : jovens.filter(j => j.departamento && j.departamento.split(';').map(d=>d.trim()).includes(ctx));
+    : ctx === 'SemDepto'
+      ? jovens.filter(j => !j.departamento || !j.departamento.trim())
+      : jovens.filter(j => j.departamento && j.departamento.split(';').map(d=>d.trim()).includes(ctx));
 
   lista = lista.sort((a,b) => a.nome.localeCompare(b.nome));
 
