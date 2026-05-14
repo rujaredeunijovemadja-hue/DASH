@@ -1394,15 +1394,24 @@ function pararAutoSync() {
 }
 async function pushToSheets() {
   if(!GAS_URL||syncPending) return; syncPending=true; showSyncBadge('syncing');
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15000);
   try {
-    const r = await fetch(GAS_URL, { method:'POST', body: JSON.stringify({
+    const r = await fetch(GAS_URL, { method:'POST', signal: controller.signal, body: JSON.stringify({
       action:'push',
       jovens, frequencias, recuperacoes, departamentos, lideres,
-      historicoMensal, metas, regras, atividades, liderSupremo,
+      historicoMensal, metas, regras, liderSupremo,
       usuario: document.getElementById('userName')?.textContent || 'Dashboard',
     }) });
-    const d = await r.json(); showSyncBadge(d.ok?'ok':'error');
-  } catch(e) { showSyncBadge('error'); } finally { syncPending=false; }
+    clearTimeout(timer);
+    const d = await r.json();
+    showSyncBadge(d.ok?'ok':'error');
+    if(!d.ok) console.error('Push erro GAS:', d.erro);
+  } catch(e) {
+    clearTimeout(timer);
+    console.error('Push falhou:', e.message);
+    showSyncBadge('error');
+  } finally { syncPending=false; }
 }
 async function pullFromSheets(forcar=false, silencioso=false) {
   if(!GAS_URL) return;
@@ -1510,7 +1519,7 @@ async function syncManual() {
     const r = await fetch(GAS_URL, { method:'POST', body: JSON.stringify({
       action:'push',
       jovens, frequencias, recuperacoes, departamentos, lideres,
-      historicoMensal, metas, regras, atividades, liderSupremo,
+      historicoMensal, metas, regras, liderSupremo,
       usuario: document.getElementById('userName')?.textContent || 'Dashboard',
     }) });
     const d = await r.json();
@@ -1626,7 +1635,6 @@ function saveData() {
   departamentos = departamentos.filter(d => d && d.id && d.nome && d.nome.trim());
   frequencias   = frequencias.filter(f => f && f.id && f.jovemId);
   recuperacoes  = recuperacoes.filter(r => r && r.id && r.jovemId);
-  atividades    = atividades.filter(a => a && a.id && a.titulo && a.titulo.trim());
 
   localStorage.setItem('jovens',JSON.stringify(jovens));
   localStorage.setItem('frequencias',JSON.stringify(frequencias));
