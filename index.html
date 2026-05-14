@@ -453,7 +453,7 @@ td.mono { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight
       </div>
 
       <div class="nav-section-label">Agenda</div>
-      <div class="nav-item" onclick="window.open('https://ruja-app.lovable.app/','_blank')">
+      <div class="nav-item" onclick="window.open(window._agendaUrl||'https://ruja-app.lovable.app/','_blank')">
         <span class="nav-icon">🌐</span> Agenda Pública
       </div>
       <div class="nav-item" onclick="navigate('aniversarios',this)">
@@ -761,13 +761,8 @@ td.mono { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight
             <span class="card-title">☁️ Sincronização Google Sheets</span>
             <span id="syncBadge" style="font-size:12px;font-weight:600;color:#6B7280">📴 Não configurado</span>
           </div>
-          <div class="form-group">
-            <label class="form-label">URL do Google Apps Script (termina em /exec)</label>
-            <div style="display:flex;gap:8px">
-              <input type="text" class="form-input" id="gasUrlInput" placeholder="https://script.google.com/macros/s/XXXXXXX/exec">
-              <button class="btn btn-primary" onclick="saveGasUrl()" style="white-space:nowrap">Salvar URL</button>
-            </div>
-            <div style="font-size:11px;color:var(--text3);margin-top:6px">Todos os dados sincronizam automaticamente entre os líderes.</div>
+          <div style="font-size:12px;color:var(--text2);margin-bottom:14px">
+            A URL de sincronização é carregada automaticamente. Nenhuma configuração necessária.
           </div>
           <div style="display:flex;gap:10px;margin-top:4px">
             <button class="btn btn-ghost btn-sm" onclick="pullFromSheets(false).then(()=>{renderAll();showToast('Dados atualizados!')})">⬇️ Puxar agora</button>
@@ -1260,39 +1255,29 @@ function ocultarErroLogin() {
   if(el) el.style.display = 'none';
 }
 
-function mostrarApp(nome, funcao) {
+async function mostrarApp(nome, funcao) {
   document.getElementById('loginPage').style.display = 'none';
   document.getElementById('appShell').style.display = 'flex';
   document.getElementById('userName').textContent = nome;
   document.getElementById('userRole').textContent = funcao;
   document.getElementById('userAvatar').textContent = nome.charAt(0).toUpperCase();
 
-  // Avisa se a URL do GAS não estiver configurada neste dispositivo
-  if(!GAS_URL) {
-    setTimeout(() => {
-      const aviso = document.createElement('div');
-      aviso.id = 'avisoGasUrl';
-      aviso.innerHTML = `
-        <div style="position:fixed;top:72px;left:50%;transform:translateX(-50%);z-index:999;
-          background:#1A1A1A;border:1px solid rgba(245,158,11,0.5);border-radius:12px;
-          padding:14px 20px;display:flex;align-items:center;gap:14px;max-width:520px;width:90%;
-          box-shadow:0 8px 32px rgba(0,0,0,0.4)">
-          <span style="font-size:22px;flex-shrink:0">⚠️</span>
-          <div style="flex:1">
-            <div style="font-size:13px;font-weight:700;color:var(--yellow);margin-bottom:3px">Sincronização não configurada</div>
-            <div style="font-size:12px;color:var(--text2)">Este dispositivo ainda não tem a URL do Google Sheets. Vá em <strong>Configurações → URL do GAS</strong> para ativar a sincronização.</div>
-          </div>
-          <div style="display:flex;gap:8px;flex-shrink:0">
-            <button onclick="navigate('config',document.querySelector('.nav-item:last-child'));document.getElementById('avisoGasUrl').remove()"
-              style="background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.4);color:var(--yellow);padding:6px 12px;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;font-family:'Barlow',sans-serif">
-              Configurar
-            </button>
-            <button onclick="document.getElementById('avisoGasUrl').remove()"
-              style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:18px;padding:0 4px">✕</button>
-          </div>
-        </div>`;
-      document.body.appendChild(aviso);
-    }, 800);
+  // Busca configs do Supabase (gas_url + agenda_url)
+  try {
+    const { data: configs } = await sb.from('config').select('chave, valor');
+    if(configs && configs.length) {
+      configs.forEach(c => {
+        if(c.chave === 'gas_url' && c.valor) {
+          GAS_URL = c.valor;
+          localStorage.setItem('gasUrl', c.valor);
+        }
+        if(c.chave === 'agenda_url' && c.valor) {
+          window._agendaUrl = c.valor;
+        }
+      });
+    }
+  } catch(e) {
+    console.warn('Não foi possível buscar configs do Supabase:', e.message);
   }
 
   pullFromSheets()
@@ -1300,8 +1285,8 @@ function mostrarApp(nome, funcao) {
     .catch(()=>{ renderAll(); iniciarAutoSync(); });
 }
 
-// GAS_URL configurada via interface (Configurações) — nunca hardcoded no código
-const GAS_URL = localStorage.getItem('gasUrl') || '';
+// GAS_URL — carregada do Supabase ao iniciar (fallback: localStorage)
+let GAS_URL = localStorage.getItem('gasUrl') || '';
 let syncTimer = null, syncPending = false;
 let autoSyncInterval = null;
 let dadosSujos = false; // true quando há alterações não sincronizadas
