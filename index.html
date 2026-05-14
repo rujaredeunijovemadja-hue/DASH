@@ -1628,6 +1628,32 @@ function calcStatus(jovemId) {
   return 'Em Risco';
 }
 
+function exportCSV(tipo) {
+  const mapas = {
+    jovens:        { data: jovens,        campos: ['id','nome','idade','contato','instagram','endereco','departamento','lider','status','entrada','batizado','dataBatismo','dataNasc','obs'] },
+    lideres:       { data: lideres,       campos: ['id','nome','contato','departamento','funcao','dataNasc'] },
+    departamentos: { data: departamentos, campos: ['id','nome','icone','lider','capacidade','desc'] },
+    frequencias:   { data: frequencias,   campos: ['id','jovemId','data','evento','presenca','obs'] },
+  };
+  const m = mapas[tipo]; if(!m) return;
+  const linhas = [m.campos.join(',')];
+  m.data.forEach(obj => {
+    linhas.push(m.campos.map(c => {
+      const v = obj[c] ?? '';
+      return typeof v === 'string' && v.includes(',') ? `"${v}"` : v;
+    }).join(','));
+  });
+  const blob = new Blob([linhas.join('\n')], { type:'text/csv;charset=utf-8;' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `ruja_${tipo}_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+}
+
+function exportCSVTudo() {
+  ['jovens','lideres','departamentos','frequencias'].forEach(t => exportCSV(t));
+}
+
 function saveData() {
   // Remove registros inválidos antes de salvar (evita linhas em branco no Sheets)
   jovens        = jovens.filter(j => j && j.id && j.nome && j.nome.trim());
@@ -2639,6 +2665,12 @@ function toggleDeptoCard(id) {
   const card = document.getElementById(`deptoCard_${id}`);
   if(!card) return;
   card.classList.toggle('open');
+}
+
+// Verifica se jovem pertence a um departamento (suporta multi-depto separado por ;)
+function temDepto(jovem, nomeDepto) {
+  if(!jovem.departamento || !nomeDepto) return false;
+  return jovem.departamento.split(';').map(d=>d.trim()).includes(nomeDepto.trim());
 }
 
 function renderDepartamentos() {
