@@ -392,6 +392,18 @@ td.mono { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight
 
 <!-- ═══ LOGIN ═══ -->
 <div id="loginPage" class="login-page">
+
+<!-- ═══ LOADING ═══ -->
+<div id="loadingScreen" style="display:none;position:fixed;inset:0;z-index:9999;background:var(--black1,#0A0A0A);flex-direction:column;align-items:center;justify-content:center;gap:24px">
+  <div style="display:flex;flex-direction:column;align-items:center;gap:20px">
+    <div style="width:56px;height:56px;border:3px solid rgba(212,43,43,0.2);border-top-color:var(--red,#D42B2B);border-radius:50%;animation:spin 0.8s linear infinite"></div>
+    <div style="text-align:center">
+      <div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:6px">Carregando RUJA</div>
+      <div id="loadingMsg" style="font-size:12px;color:#6B7280">Buscando configurações...</div>
+    </div>
+  </div>
+  <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+</div>
   <div class="login-bg"></div>
   <div class="login-card">
     <div class="login-logo">
@@ -1256,16 +1268,21 @@ function ocultarErroLogin() {
 }
 
 async function mostrarApp(nome, funcao) {
+  // Esconde login, mostra loading
   document.getElementById('loginPage').style.display = 'none';
-  document.getElementById('appShell').style.display = 'flex';
+  const loading = document.getElementById('loadingScreen');
+  const loadingMsg = document.getElementById('loadingMsg');
+  loading.style.display = 'flex';
+
+  const setMsg = (msg) => { if(loadingMsg) loadingMsg.textContent = msg; };
+
+  // Prepara dados do usuário
   document.getElementById('userName').textContent = nome;
   document.getElementById('userRole').textContent = funcao;
   document.getElementById('userAvatar').textContent = nome.charAt(0).toUpperCase();
 
-  // Renderiza imediatamente com dados do localStorage (evita tela em branco)
-  renderAll();
-
-  // Busca configs do Supabase (gas_url + agenda_url)
+  // 1. Busca configs do Supabase
+  setMsg('Buscando configurações...');
   try {
     const { data: configs, error } = await sb.from('config').select('chave, valor');
     if(error) console.warn('Supabase config erro:', error.message);
@@ -1285,19 +1302,28 @@ async function mostrarApp(nome, funcao) {
     console.warn('Não foi possível buscar configs do Supabase:', e.message);
   }
 
-  // Só puxa do Sheets se tiver URL
+  // 2. Pull do Google Sheets
   if(GAS_URL) {
+    setMsg('Sincronizando dados...');
     try {
       await pullFromSheets();
-      renderAll();
     } catch(e) {
       console.warn('Pull falhou:', e.message);
     }
-    iniciarAutoSync();
   } else {
     console.warn('GAS_URL não encontrada — sem sincronização');
-    showSyncBadge('offline');
   }
+
+  // 3. Renderiza tudo e mostra o app
+  setMsg('Preparando painel...');
+  await new Promise(r => setTimeout(r, 300)); // pequena pausa para o spinner não piscar
+  renderAll();
+
+  loading.style.display = 'none';
+  document.getElementById('appShell').style.display = 'flex';
+
+  if(GAS_URL) iniciarAutoSync();
+  else showSyncBadge('offline');
 }
 
 // GAS_URL — carregada do Supabase ao iniciar (fallback: localStorage)
@@ -2038,7 +2064,13 @@ function navigate(page,el) {
   document.getElementById('pageSubtitle').textContent=t[1];
   renderPage(page);
 }
-function renderAll() { renderPage(currentPage); }
+function renderAll() {
+  // Renderiza a página atual + páginas críticas em background
+  renderPage(currentPage);
+  // Garante que tabelas de outras páginas também ficam atualizadas
+  const paginas = ['dashboard','jovens','frequencia','metas','alertas','recuperacao','departamentos','lideres','aniversarios','lidersupremo'];
+  paginas.forEach(p => { if(p !== currentPage) { try { renderPage(p); } catch(e) {} } });
+}
 function renderPage(page) {
   if(page==='aniversarios') renderAniversarios();
   else if(page==='dashboard')    renderDashboard();
