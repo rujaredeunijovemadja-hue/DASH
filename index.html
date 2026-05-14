@@ -6,6 +6,7 @@
 <title>RUJA — Painel de Gestão</title>
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800;900&family=Barlow+Condensed:wght@700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>window.Chart||document.write('<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"><\/script>')</script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
 :root {
@@ -1534,6 +1535,13 @@ const pageTitles = {
   config:['Configurações','Parâmetros do sistema'],
 };
 
+function deptosBadges(depto) {
+  if(!depto) return '<span style="color:var(--text3)">—</span>';
+  return depto.split(';').filter(Boolean).map(d =>
+    `<span style="display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;background:rgba(212,43,43,0.15);color:var(--red);margin:1px">${d.trim()}</span>`
+  ).join(' ');
+}
+
 function getStatusBadge(s) {
   if(s==='Ativo')     return '<span class="badge badge-ativo">🟢 Ativo</span>';
   if(s==='Oscilando') return '<span class="badge badge-oscilando">🟡 Oscilando</span>';
@@ -2186,6 +2194,10 @@ document.querySelectorAll('.modal-backdrop').forEach(b=>{
 // ═══════════════════════════════════════════════
 let chartStatus=null, chartDepto=null;
 function renderDashboard() {
+  if(typeof Chart === 'undefined') {
+    console.warn('[RUJA] Chart.js ainda não carregou — dashboard sem gráficos');
+    return;
+  }
   const ativos    = jovens.filter(j=>j.status==='Ativo').length;
   const oscilando = jovens.filter(j=>j.status==='Oscilando').length;
   const ociosos   = jovens.filter(j=>j.status==='Ocioso').length;
