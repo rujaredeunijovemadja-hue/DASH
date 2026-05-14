@@ -683,10 +683,21 @@ td.mono { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight
       <!-- ═══ FREQUÊNCIA ═══ -->
       <div class="page" id="page-frequencia">
         <div class="kpi-grid-3" style="margin-bottom:20px" id="freqKpis"></div>
+
+        <!-- Filtro por contexto -->
+        <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center">
+          <span style="font-size:12px;color:var(--text3);font-weight:600">FILTRAR:</span>
+          <button class="filter-tab active" id="freqFiltroTodos"   onclick="setFreqFiltro('Todos',this)">🌐 Todos</button>
+          <button class="filter-tab"        id="freqFiltroGeral"   onclick="setFreqFiltro('Geral',this)">📋 Geral</button>
+          <button class="filter-tab"        id="freqFiltroTeens"   onclick="setFreqFiltro('Teens',this)">🧒 Teens</button>
+          <button class="filter-tab"        id="freqFiltroSimply"  onclick="setFreqFiltro('Simply',this)">😎 Simply</button>
+          <button class="filter-tab"        id="freqFiltroUp"      onclick="setFreqFiltro('Up',this)">🔥 Up</button>
+        </div>
+
         <div class="table-wrap">
           <div class="table-head">
             <span class="table-head-title">Registro de Frequência</span>
-            <button class="btn btn-primary btn-sm" onclick="openModal('modalFreq')">+ Registrar Presença</button>
+            <button class="btn btn-primary btn-sm" onclick="openModalFreqNovo()">+ Registrar Presença</button>
           </div>
           <table>
             <thead><tr><th>Nome</th><th>Departamento</th><th>Frequência</th><th>Última Presença</th><th>Faltas Seguidas</th><th>Status</th></tr></thead>
@@ -1010,42 +1021,59 @@ td.mono { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight
 
 <!-- Modal Frequência -->
 <div class="modal-backdrop" id="modalFreq">
-  <div class="modal">
+  <div class="modal" style="max-width:640px">
     <div class="modal-title">
-      Registrar Presença
+      📋 Registrar Presença
       <button class="modal-close" onclick="closeModal('modalFreq')">✕</button>
     </div>
+
+    <!-- Contexto -->
+    <div class="form-group">
+      <label class="form-label">Contexto / Grupo *</label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="filter-tab active" id="fCtxGeral"   onclick="setFreqContexto('Geral',this)">🌐 Geral</button>
+        <button class="filter-tab"        id="fCtxTeens"   onclick="setFreqContexto('Teens',this)">🧒 Teens</button>
+        <button class="filter-tab"        id="fCtxSimply"  onclick="setFreqContexto('Simply',this)">😎 Simply</button>
+        <button class="filter-tab"        id="fCtxUp"      onclick="setFreqContexto('Up',this)">🔥 Up</button>
+      </div>
+    </div>
+
+    <!-- Evento -->
     <div class="form-row">
       <div class="form-group">
-        <label class="form-label">Jovem *</label>
-        <select class="form-select" id="fJovem"></select>
+        <label class="form-label">Tipo de Evento *</label>
+        <select class="form-select" id="fEventoTipo" onchange="onFreqEventoChange(this)"></select>
+      </div>
+      <div class="form-group" id="fEventoOutroGrupo" style="display:none">
+        <label class="form-label">Nome do Evento *</label>
+        <input type="text" class="form-input" id="fEventoOutro" placeholder="Ex: Retiro, Acampamento...">
       </div>
       <div class="form-group">
         <label class="form-label">Data *</label>
         <input type="text" class="form-input date-mask" id="fData" placeholder="DD/MM/AAAA" maxlength="10" autocomplete="off" oninput="maskDate(this)">
       </div>
     </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label class="form-label">Evento / Reunião</label>
-        <input type="text" class="form-input" id="fEvento" placeholder="Ex: Culto domingo, Célula...">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Presença</label>
-        <select class="form-select" id="fPresenca">
-          <option value="presente">✅ Presente</option>
-          <option value="falta">❌ Falta</option>
-          <option value="justificada">⚠️ Falta justificada</option>
-        </select>
-      </div>
-    </div>
+
+    <!-- Lista de jovens com checkbox -->
     <div class="form-group">
-      <label class="form-label">Observação</label>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <label class="form-label" style="margin:0">Jovens — marque os <strong>presentes</strong></label>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-ghost btn-sm" onclick="freqMarcarTodos(true)">✅ Todos</button>
+          <button class="btn btn-ghost btn-sm" onclick="freqMarcarTodos(false)">❌ Nenhum</button>
+        </div>
+      </div>
+      <div id="fJovensList" style="max-height:260px;overflow-y:auto;border:1px solid var(--border2);border-radius:10px;padding:4px"></div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Observação geral</label>
       <input type="text" class="form-input" id="fObs" placeholder="Opcional">
     </div>
+
     <div class="form-footer">
       <button class="btn btn-ghost" onclick="closeModal('modalFreq')">Cancelar</button>
-      <button class="btn btn-primary" onclick="saveFreq()">Registrar</button>
+      <button class="btn btn-primary" onclick="saveFreq()">💾 Registrar Presenças</button>
     </div>
   </div>
 </div>
@@ -2193,7 +2221,7 @@ function renderPage(page) {
 }
 function handleAddBtn() {
   if(currentPage==='jovens')       openModal('modalJovem');
-  else if(currentPage==='frequencia')  openModal('modalFreq');
+  else if(currentPage==='frequencia')  openModalFreqNovo();
   else if(currentPage==='recuperacao') openModal('modalRecup');
   else if(currentPage==='departamentos') openModal('modalDepto');
   else if(currentPage==='lideres') openModal('modalLider');
@@ -2441,11 +2469,39 @@ function renderJovensTable(lista) {
 // ═══════════════════════════════════════════════
 // RENDER — FREQUÊNCIA
 // ═══════════════════════════════════════════════
+let freqFiltroAtual = 'Todos';
+
+function setFreqFiltro(ctx, el) {
+  freqFiltroAtual = ctx;
+  document.querySelectorAll('[id^="freqFiltro"]').forEach(b => b.classList.remove('active'));
+  if(el) el.classList.add('active');
+  renderFrequencia();
+}
+
 function renderFrequencia() {
-  const pcts=jovens.map(j=>getFreqPct(j.id));
-  const media=pcts.length?Math.round(pcts.reduce((a,b)=>a+b,0)/pcts.length):0;
-  const emDia=jovens.filter(j=>getFreqPct(j.id)>=regras.ativo).length;
-  const baixa=jovens.filter(j=>getFreqPct(j.id)<regras.oscilando).length;
+  // Filtra jovens pelo contexto selecionado
+  let listaJovens = freqFiltroAtual === 'Todos'
+    ? [...jovens]
+    : freqFiltroAtual === 'Geral'
+      ? [...jovens]
+      : jovens.filter(j => j.departamento && j.departamento.split(';').map(d=>d.trim()).includes(freqFiltroAtual));
+
+  // Filtra frequências pelo contexto (para cálculo de %)
+  const freqFiltradas = freqFiltroAtual === 'Todos' || freqFiltroAtual === 'Geral'
+    ? frequencias
+    : frequencias.filter(f => !f.contexto || f.contexto === freqFiltroAtual || f.contexto === 'Geral');
+
+  const getFreqCtx = (jovemId) => {
+    const total = freqFiltradas.filter(f => f.jovemId === jovemId).length;
+    if(!total) return 0;
+    const pres = freqFiltradas.filter(f => f.jovemId === jovemId && f.presenca === 'presente').length;
+    return Math.round((pres / total) * 100);
+  };
+
+  const pcts = listaJovens.map(j => getFreqPct(j.id));
+  const media = pcts.length ? Math.round(pcts.reduce((a,b)=>a+b,0)/pcts.length) : 0;
+  const emDia = listaJovens.filter(j => getFreqPct(j.id) >= regras.ativo).length;
+  const baixa = listaJovens.filter(j => getFreqPct(j.id) < regras.oscilando).length;
 
   document.getElementById('freqKpis').innerHTML=[
     { label:'Frequência Média', value:media+'%', cls:media>=regras.ativo?'green':media>=regras.oscilando?'yellow':'red' },
@@ -2453,7 +2509,7 @@ function renderFrequencia() {
     { label:'Frequência Baixa (<'+regras.oscilando+'%)', value:baixa, cls:'red' },
   ].map(k=>`<div class="kpi-card"><div class="kpi-label">${k.label}</div><div class="kpi-value ${k.cls}">${k.value}</div></div>`).join('');
 
-  document.getElementById('freqTable').innerHTML=[...jovens].sort((a,b)=>getFreqPct(a.id)-getFreqPct(b.id)).map(j=>{
+  document.getElementById('freqTable').innerHTML=[...listaJovens].sort((a,b)=>getFreqPct(a.id)-getFreqPct(b.id)).map(j=>{
     const pct=getFreqPct(j.id);
     const faltas=getFaltasSeguidas(j.id);
     const ultima=frequencias.filter(f=>f.jovemId===j.id).sort((a,b)=>b.data.localeCompare(a.data))[0];
@@ -2835,16 +2891,124 @@ function deleteJovem(id) {
 // ═══════════════════════════════════════════════
 // CRUD — FREQUÊNCIA
 // ═══════════════════════════════════════════════
-function saveFreq() {
-  const jovemId=parseInt(document.getElementById('fJovem').value);
-  if(!jovemId) return alert('Selecione um jovem.');
-  const val={ id:Date.now(), jovemId, data:document.getElementById('fData').value, evento:document.getElementById('fEvento').value, presenca:document.getElementById('fPresenca').value, obs:document.getElementById('fObs').value };
-  frequencias.push(val);
-  // Recalcula status automático
-  const j=jovens.find(x=>x.id===jovemId);
-  if(j) j.status=calcStatus(jovemId);
-  saveData(); closeModal('modalFreq'); showToast('Presença registrada!'); renderFrequencia();
+// ═══════════════════════════════════════════════
+// FREQUÊNCIA — NOVO SISTEMA POR CONTEXTO
+// ═══════════════════════════════════════════════
+const FREQ_EVENTOS = {
+  Geral:  ['Conexão','Sextou na 19','Reunião Geral','Chega Mais','Aniversário','✏️ Outro evento...'],
+  Teens:  ['Office','Confraternização','Saídas para Igrejas Amigas','EBD','✏️ Outro evento...'],
+  Simply: ['Office','Confraternização','Saídas para Igrejas Amigas','EBD','✏️ Outro evento...'],
+  Up:     ['Office','Confraternização','Saídas para Igrejas Amigas','✏️ Outro evento...'],
+};
+
+let freqContextoAtual = 'Geral';
+
+function setFreqContexto(ctx, el) {
+  freqContextoAtual = ctx;
+  document.querySelectorAll('[id^="fCtx"]').forEach(b => b.classList.remove('active'));
+  if(el) el.classList.add('active');
+  // Atualiza dropdown de eventos
+  const sel = document.getElementById('fEventoTipo');
+  sel.innerHTML = FREQ_EVENTOS[ctx].map(e => `<option value="${e}">${e}</option>`).join('');
+  onFreqEventoChange(sel);
+  // Atualiza lista de jovens
+  renderFreqJovens();
 }
+
+function onFreqEventoChange(sel) {
+  const isOutro = sel.value === '✏️ Outro evento...';
+  document.getElementById('fEventoOutroGrupo').style.display = isOutro ? 'block' : 'none';
+  if(!isOutro) document.getElementById('fEventoOutro').value = '';
+}
+
+function renderFreqJovens() {
+  const ctx = freqContextoAtual;
+  let lista = ctx === 'Geral'
+    ? [...jovens]
+    : jovens.filter(j => j.departamento && j.departamento.split(';').map(d=>d.trim()).includes(ctx));
+
+  lista = lista.sort((a,b) => a.nome.localeCompare(b.nome));
+
+  const container = document.getElementById('fJovensList');
+  if(!lista.length) {
+    container.innerHTML = `<div style="padding:16px;text-align:center;color:var(--text3);font-size:13px">Nenhum jovem encontrado para este contexto.</div>`;
+    return;
+  }
+
+  container.innerHTML = lista.map(j => `
+    <label style="display:flex;align-items:center;gap:12px;padding:8px 12px;cursor:pointer;border-radius:8px;transition:background 0.15s" onmouseover="this.style.background='rgba(255,255,255,0.04)'" onmouseout="this.style.background='none'">
+      <input type="checkbox" id="fCheck_${j.id}" value="${j.id}" checked style="width:16px;height:16px;accent-color:var(--red);cursor:pointer">
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:600">${j.nome}</div>
+        <div style="font-size:11px;color:var(--text3)">${j.departamento||'Sem departamento'}</div>
+      </div>
+      <span style="font-size:11px;color:var(--text3)">${getFreqPct(j.id)}%</span>
+    </label>
+  `).join('');
+}
+
+function freqMarcarTodos(val) {
+  document.querySelectorAll('#fJovensList input[type=checkbox]').forEach(c => c.checked = val);
+}
+
+function openModalFreqNovo() {
+  freqContextoAtual = 'Geral';
+  // Reset contexto
+  document.querySelectorAll('[id^="fCtx"]').forEach(b => b.classList.remove('active'));
+  document.getElementById('fCtxGeral').classList.add('active');
+  // Preenche data com hoje
+  const hoje = new Date();
+  document.getElementById('fData').value = `${String(hoje.getDate()).padStart(2,'0')}/${String(hoje.getMonth()+1).padStart(2,'0')}/${hoje.getFullYear()}`;
+  document.getElementById('fObs').value = '';
+  // Preenche eventos
+  const sel = document.getElementById('fEventoTipo');
+  sel.innerHTML = FREQ_EVENTOS['Geral'].map(e => `<option value="${e}">${e}</option>`).join('');
+  document.getElementById('fEventoOutroGrupo').style.display = 'none';
+  // Preenche jovens
+  renderFreqJovens();
+  document.getElementById('modalFreq').classList.add('open');
+}
+
+function saveFreq() {
+  const data = document.getElementById('fData').value;
+  if(!data) return alert('Informe a data.');
+
+  const tipoEvento = document.getElementById('fEventoTipo').value;
+  const eventoFinal = tipoEvento === '✏️ Outro evento...'
+    ? document.getElementById('fEventoOutro').value.trim()
+    : tipoEvento;
+  if(!eventoFinal) return alert('Informe o nome do evento.');
+
+  const obs = document.getElementById('fObs').value;
+  const checkboxes = document.querySelectorAll('#fJovensList input[type=checkbox]');
+  if(!checkboxes.length) return alert('Nenhum jovem na lista.');
+
+  let count = 0;
+  checkboxes.forEach(cb => {
+    const jovemId = parseInt(cb.value);
+    const presenca = cb.checked ? 'presente' : 'falta';
+    frequencias.push({
+      id: Date.now() + Math.random(),
+      jovemId,
+      data,
+      evento: eventoFinal,
+      contexto: freqContextoAtual,
+      presenca,
+      obs,
+    });
+    // Recalcula status
+    const j = jovens.find(x => x.id === jovemId);
+    if(j) j.status = calcStatus(jovemId);
+    count++;
+  });
+
+  saveData();
+  closeModal('modalFreq');
+  showToast(`✅ ${count} presenças registradas!`);
+  renderFrequencia();
+}
+
+
 
 // ═══════════════════════════════════════════════
 // CRUD — RECUPERAÇÃO
