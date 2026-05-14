@@ -688,7 +688,6 @@ td.mono { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight
         <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center">
           <span style="font-size:12px;color:var(--text3);font-weight:600">FILTRAR:</span>
           <button class="filter-tab active" id="freqFiltroTodos"   onclick="setFreqFiltro('Todos',this)">🌐 Todos</button>
-          <button class="filter-tab"        id="freqFiltroGeral"   onclick="setFreqFiltro('Geral',this)">📋 Geral</button>
           <button class="filter-tab"        id="freqFiltroTeens"   onclick="setFreqFiltro('Teens',this)">🧒 Teens</button>
           <button class="filter-tab"        id="freqFiltroSimply"  onclick="setFreqFiltro('Simply',this)">😎 Simply</button>
           <button class="filter-tab"        id="freqFiltroUp"      onclick="setFreqFiltro('Up',this)">🔥 Up</button>
@@ -2479,15 +2478,13 @@ function setFreqFiltro(ctx, el) {
 }
 
 function renderFrequencia() {
-  // Filtra jovens pelo contexto selecionado
+  // Todos = todos os jovens; Teens/Simply/Up = filtra pelo departamento
   let listaJovens = freqFiltroAtual === 'Todos'
     ? [...jovens]
-    : freqFiltroAtual === 'Geral'
-      ? [...jovens]
-      : jovens.filter(j => j.departamento && j.departamento.split(';').map(d=>d.trim()).includes(freqFiltroAtual));
+    : jovens.filter(j => j.departamento && j.departamento.split(';').map(d=>d.trim()).includes(freqFiltroAtual));
 
-  // Filtra frequências pelo contexto (para cálculo de %)
-  const freqFiltradas = freqFiltroAtual === 'Todos' || freqFiltroAtual === 'Geral'
+  // Frequências: Todos considera tudo; grupos consideram do grupo + Geral
+  const freqFiltradas = freqFiltroAtual === 'Todos'
     ? frequencias
     : frequencias.filter(f => !f.contexto || f.contexto === freqFiltroAtual || f.contexto === 'Geral');
 
@@ -2923,7 +2920,10 @@ function onFreqEventoChange(sel) {
 
 function renderFreqJovens() {
   const ctx = freqContextoAtual;
-  let lista = ctx === 'Geral'
+
+  // Geral = todos os jovens (é tipo de evento, não filtro de grupo)
+  // Teens/Simply/Up = filtra pelo departamento
+  let lista = (ctx === 'Geral')
     ? [...jovens]
     : jovens.filter(j => j.departamento && j.departamento.split(';').map(d=>d.trim()).includes(ctx));
 
