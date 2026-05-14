@@ -2315,6 +2315,7 @@ function filterJovens(q) {
   renderJovensTable(lista);
 }
 function renderJovens() {
+  console.log('[RUJA] renderJovens — jovens:', jovens.length, '| filtro:', activeStatusFilter);
   const total=jovens.length, ativos=jovens.filter(j=>j.status==='Ativo').length;
   const semDepto=jovens.filter(j=>!j.departamento).length, risco=jovens.filter(j=>j.status==='Em Risco').length;
   document.getElementById('jovensKpis').innerHTML=[
@@ -2329,7 +2330,10 @@ function renderJovens() {
   renderJovensTable(lista);
 }
 function renderJovensTable(lista) {
-  document.getElementById('jovensTable').innerHTML=lista.length
+  const el = document.getElementById('jovensTable');
+  console.log('[RUJA] renderJovensTable — lista:', lista.length, '| el:', !!el);
+  if(!el) { console.error('[RUJA] jovensTable não encontrado no DOM'); return; }
+  el.innerHTML=lista.length
     ? lista.map(j=>`<tr>
         <td><strong>${j.nome}</strong>${j.instagram?`<div style="font-size:11px;color:var(--text3)">${j.instagram}</div>`:''}</td>
         <td style="text-align:center">${j.idade||'—'}</td>
