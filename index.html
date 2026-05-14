@@ -1266,6 +1266,35 @@ function mostrarApp(nome, funcao) {
   document.getElementById('userName').textContent = nome;
   document.getElementById('userRole').textContent = funcao;
   document.getElementById('userAvatar').textContent = nome.charAt(0).toUpperCase();
+
+  // Avisa se a URL do GAS não estiver configurada neste dispositivo
+  if(!GAS_URL) {
+    setTimeout(() => {
+      const aviso = document.createElement('div');
+      aviso.id = 'avisoGasUrl';
+      aviso.innerHTML = `
+        <div style="position:fixed;top:72px;left:50%;transform:translateX(-50%);z-index:999;
+          background:#1A1A1A;border:1px solid rgba(245,158,11,0.5);border-radius:12px;
+          padding:14px 20px;display:flex;align-items:center;gap:14px;max-width:520px;width:90%;
+          box-shadow:0 8px 32px rgba(0,0,0,0.4)">
+          <span style="font-size:22px;flex-shrink:0">⚠️</span>
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:700;color:var(--yellow);margin-bottom:3px">Sincronização não configurada</div>
+            <div style="font-size:12px;color:var(--text2)">Este dispositivo ainda não tem a URL do Google Sheets. Vá em <strong>Configurações → URL do GAS</strong> para ativar a sincronização.</div>
+          </div>
+          <div style="display:flex;gap:8px;flex-shrink:0">
+            <button onclick="navigate('config',document.querySelector('.nav-item:last-child'));document.getElementById('avisoGasUrl').remove()"
+              style="background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.4);color:var(--yellow);padding:6px 12px;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;font-family:'Barlow',sans-serif">
+              Configurar
+            </button>
+            <button onclick="document.getElementById('avisoGasUrl').remove()"
+              style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:18px;padding:0 4px">✕</button>
+          </div>
+        </div>`;
+      document.body.appendChild(aviso);
+    }, 800);
+  }
+
   pullFromSheets()
     .then(()=>{ renderAll(); iniciarAutoSync(); })
     .catch(()=>{ renderAll(); iniciarAutoSync(); });
