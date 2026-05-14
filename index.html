@@ -395,15 +395,38 @@ td.mono { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight
 <div id="loginPage" class="login-page">
 
 <!-- ═══ LOADING ═══ -->
-<div id="loadingScreen" style="display:none;position:fixed;inset:0;z-index:9999;background:var(--black1,#0A0A0A);flex-direction:column;align-items:center;justify-content:center;gap:24px">
-  <div style="display:flex;flex-direction:column;align-items:center;gap:20px">
-    <div style="width:56px;height:56px;border:3px solid rgba(212,43,43,0.2);border-top-color:var(--red,#D42B2B);border-radius:50%;animation:spin 0.8s linear infinite"></div>
-    <div style="text-align:center">
-      <div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:6px">Carregando RUJA</div>
-      <div id="loadingMsg" style="font-size:12px;color:#6B7280">Buscando configurações...</div>
+<div id="loadingScreen" style="display:none;position:fixed;inset:0;z-index:9999;background:#0A0A0A;flex-direction:column;align-items:center;justify-content:center;gap:32px">
+
+  <!-- Logo -->
+  <div style="display:flex;flex-direction:column;align-items:center;gap:16px">
+    <div style="position:relative;width:80px;height:80px">
+      <!-- Spinner ao redor do logo -->
+      <div style="position:absolute;inset:0;border-radius:50%;border:3px solid rgba(212,43,43,0.15);border-top-color:#D42B2B;animation:spin 1s linear infinite"></div>
+      <!-- Ícone de leão centralizado -->
+      <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:36px">🦁</div>
+    </div>
+
+    <!-- Nome RUJA com letras animadas -->
+    <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:36px;font-weight:900;letter-spacing:8px;color:#D42B2B;text-transform:uppercase;animation:pulse 2s ease-in-out infinite">RUJA</div>
+      <div style="font-size:11px;color:#4B5563;letter-spacing:3px;text-transform:uppercase">Rede UniJovem ADJA</div>
     </div>
   </div>
-  <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+
+  <!-- Mensagem de status -->
+  <div style="display:flex;flex-direction:column;align-items:center;gap:8px">
+    <div id="loadingMsg" style="font-size:13px;color:#6B7280;letter-spacing:0.5px">Carregando...</div>
+    <!-- Barra de progresso animada -->
+    <div style="width:160px;height:2px;background:rgba(212,43,43,0.15);border-radius:2px;overflow:hidden">
+      <div style="height:100%;background:#D42B2B;border-radius:2px;animation:progress 1.5s ease-in-out infinite"></div>
+    </div>
+  </div>
+
+  <style>
+    @keyframes spin { to { transform: rotate(360deg) } }
+    @keyframes pulse { 0%,100% { opacity:1 } 50% { opacity:0.6 } }
+    @keyframes progress { 0% { width:0%;margin-left:0 } 50% { width:60%;margin-left:20% } 100% { width:0%;margin-left:100% } }
+  </style>
 </div>
   <div class="login-bg"></div>
   <div class="login-card">
