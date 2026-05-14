@@ -1262,14 +1262,19 @@ async function mostrarApp(nome, funcao) {
   document.getElementById('userRole').textContent = funcao;
   document.getElementById('userAvatar').textContent = nome.charAt(0).toUpperCase();
 
+  // Renderiza imediatamente com dados do localStorage (evita tela em branco)
+  renderAll();
+
   // Busca configs do Supabase (gas_url + agenda_url)
   try {
-    const { data: configs } = await sb.from('config').select('chave, valor');
+    const { data: configs, error } = await sb.from('config').select('chave, valor');
+    if(error) console.warn('Supabase config erro:', error.message);
     if(configs && configs.length) {
       configs.forEach(c => {
         if(c.chave === 'gas_url' && c.valor) {
           GAS_URL = c.valor;
           localStorage.setItem('gasUrl', c.valor);
+          console.log('✅ GAS_URL carregada do Supabase');
         }
         if(c.chave === 'agenda_url' && c.valor) {
           window._agendaUrl = c.valor;
@@ -1280,9 +1285,19 @@ async function mostrarApp(nome, funcao) {
     console.warn('Não foi possível buscar configs do Supabase:', e.message);
   }
 
-  pullFromSheets()
-    .then(()=>{ renderAll(); iniciarAutoSync(); })
-    .catch(()=>{ renderAll(); iniciarAutoSync(); });
+  // Só puxa do Sheets se tiver URL
+  if(GAS_URL) {
+    try {
+      await pullFromSheets();
+      renderAll();
+    } catch(e) {
+      console.warn('Pull falhou:', e.message);
+    }
+    iniciarAutoSync();
+  } else {
+    console.warn('GAS_URL não encontrada — sem sincronização');
+    showSyncBadge('offline');
+  }
 }
 
 // GAS_URL — carregada do Supabase ao iniciar (fallback: localStorage)
