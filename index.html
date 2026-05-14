@@ -1312,17 +1312,10 @@ async function mostrarApp(nome, funcao) {
     console.warn('Não foi possível buscar configs do Supabase:', e.message);
   }
 
-  // 2. Pull do Google Sheets (com timeout de 8s para não travar)
+  // 2. Pull do Google Sheets (tem timeout interno de 10s via AbortController)
   if(GAS_URL) {
     setMsg('Sincronizando dados...');
-    try {
-      await Promise.race([
-        pullFromSheets(),
-        new Promise(r => setTimeout(r, 8000)) // timeout de segurança
-      ]);
-    } catch(e) {
-      console.warn('Pull falhou:', e.message);
-    }
+    try { await pullFromSheets(); } catch(e) { console.warn('Pull falhou:', e.message); }
   } else {
     console.warn('GAS_URL não encontrada — sem sincronização');
   }
@@ -1390,10 +1383,8 @@ async function pushToSheets() {
 async function pullFromSheets(forcar=false, silencioso=false) {
   if(!GAS_URL) return;
 
-  // Pull automático (silencioso): NUNCA roda com dados sujos
   if(silencioso && dadosSujos) return;
 
-  // Pull manual com dados não salvos: pergunta antes de sobrescrever
   if(!forcar && !silencioso && dadosSujos) {
     const ok = confirm(
       '⚠️ Você tem alterações não sincronizadas!\n\n' +
@@ -1405,8 +1396,15 @@ async function pullFromSheets(forcar=false, silencioso=false) {
   }
 
   if(!silencioso) showSyncBadge('syncing');
+
+  // AbortController com timeout de 10s
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 10000);
+
   try {
-    const r = await fetch(GAS_URL+'?action=pull'); const d = await r.json();
+    const r = await fetch(GAS_URL, { signal: controller.signal });
+    clearTimeout(timer);
+    const d = await r.json();
     if(d.jovens)          { jovens=d.jovens;                       localStorage.setItem('jovens',JSON.stringify(jovens)); }
     if(d.frequencias)     { frequencias=d.frequencias;             localStorage.setItem('frequencias',JSON.stringify(frequencias)); }
     if(d.recuperacoes)    { recuperacoes=d.recuperacoes;           localStorage.setItem('recuperacoes',JSON.stringify(recuperacoes)); }
@@ -1415,12 +1413,15 @@ async function pullFromSheets(forcar=false, silencioso=false) {
     if(d.historicoMensal) { historicoMensal=d.historicoMensal;     localStorage.setItem('historicoMensal',JSON.stringify(historicoMensal)); }
     if(d.metas)           { metas=d.metas;                         localStorage.setItem('metas',JSON.stringify(metas)); }
     if(d.regras)          { regras=d.regras;                       localStorage.setItem('regras',JSON.stringify(regras)); }
-    if(d.atividades)      { atividades=d.atividades;               localStorage.setItem('atividades',JSON.stringify(atividades)); }
     if(d.liderSupremo)    { liderSupremo=d.liderSupremo;           localStorage.setItem('liderSupremo',JSON.stringify(liderSupremo)); }
     dadosSujos = false; limparAvisoPendente();
     if(!silencioso) showSyncBadge('ok');
-    if(silencioso) renderAll(); // atualiza tela no pull automático
-  } catch(e) { if(!silencioso) showSyncBadge('offline'); }
+    if(silencioso) renderAll();
+  } catch(e) {
+    clearTimeout(timer);
+    console.warn('Pull erro:', e.message);
+    if(!silencioso) showSyncBadge('offline');
+  }
 }
 function marcarDadosSujos() {
   dadosSujos = true;
