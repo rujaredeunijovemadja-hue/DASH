@@ -2087,11 +2087,14 @@ function navigate(page,el) {
   renderPage(page);
 }
 function renderAll() {
-  // Renderiza a página atual + páginas críticas em background
+  // Renderiza a página atual
   renderPage(currentPage);
-  // Garante que tabelas de outras páginas também ficam atualizadas
-  const paginas = ['dashboard','jovens','frequencia','metas','alertas','recuperacao','departamentos','lideres','aniversarios','lidersupremo'];
-  paginas.forEach(p => { if(p !== currentPage) { try { renderPage(p); } catch(e) {} } });
+  // Atualiza tabelas críticas com pequeno delay para não conflitar com o DOM
+  setTimeout(() => {
+    try { renderJovens(); } catch(e) {}
+    try { renderFrequencia(); } catch(e) {}
+    try { renderDashboard(); } catch(e) {}
+  }, 100);
 }
 function renderPage(page) {
   if(page==='aniversarios') renderAniversarios();
