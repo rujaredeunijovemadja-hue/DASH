@@ -1542,6 +1542,30 @@ function deptosBadges(depto) {
   ).join(' ');
 }
 
+// Converte DD/MM/AAAA → AAAA-MM-DD (ISO)
+function dateToISO(str) {
+  if(!str) return '';
+  const m = str.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if(!m) return '';
+  return `${m[3]}-${m[2]}-${m[1]}`;
+}
+
+// Converte AAAA-MM-DD (ISO) → DD/MM/AAAA
+function dateFromISO(str) {
+  if(!str) return '';
+  const m = str.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if(!m) return '';
+  return `${m[3]}/${m[2]}/${m[1]}`;
+}
+
+// Máscara automática para campos de data DD/MM/AAAA
+function maskDate(el) {
+  let v = el.value.replace(/\D/g,'');
+  if(v.length > 2) v = v.slice(0,2)+'/'+v.slice(2);
+  if(v.length > 5) v = v.slice(0,5)+'/'+v.slice(5);
+  el.value = v.slice(0,10);
+}
+
 function getStatusBadge(s) {
   if(s==='Ativo')     return '<span class="badge badge-ativo">🟢 Ativo</span>';
   if(s==='Oscilando') return '<span class="badge badge-oscilando">🟡 Oscilando</span>';
@@ -2327,7 +2351,6 @@ function filterJovens(q) {
   renderJovensTable(lista);
 }
 function renderJovens() {
-  console.log('[RUJA] renderJovens — jovens:', jovens.length, '| filtro:', activeStatusFilter);
   const total=jovens.length, ativos=jovens.filter(j=>j.status==='Ativo').length;
   const semDepto=jovens.filter(j=>!j.departamento).length, risco=jovens.filter(j=>j.status==='Em Risco').length;
   document.getElementById('jovensKpis').innerHTML=[
@@ -2343,8 +2366,7 @@ function renderJovens() {
 }
 function renderJovensTable(lista) {
   const el = document.getElementById('jovensTable');
-  console.log('[RUJA] renderJovensTable — lista:', lista.length, '| el:', !!el);
-  if(!el) { console.error('[RUJA] jovensTable não encontrado no DOM'); return; }
+  if(!el) return;
   el.innerHTML=lista.length
     ? lista.map(j=>`<tr>
         <td><strong>${j.nome}</strong>${j.instagram?`<div style="font-size:11px;color:var(--text3)">${j.instagram}</div>`:''}</td>
