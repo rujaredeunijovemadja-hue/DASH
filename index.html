@@ -1268,13 +1268,23 @@ function ocultarErroLogin() {
 }
 
 async function mostrarApp(nome, funcao) {
-  // Esconde login, mostra loading
-  document.getElementById('loginPage').style.display = 'none';
   const loading = document.getElementById('loadingScreen');
   const loadingMsg = document.getElementById('loadingMsg');
-  loading.style.display = 'flex';
-
   const setMsg = (msg) => { if(loadingMsg) loadingMsg.textContent = msg; };
+
+  const forcarAbertura = () => {
+    if(loading) loading.style.display = 'none';
+    document.getElementById('appShell').style.display = 'flex';
+  };
+
+  // Segurança absoluta: se travar por mais de 12s, abre mesmo assim
+  const emergencia = setTimeout(forcarAbertura, 12000);
+
+  try {
+
+  // Esconde login, mostra loading
+  document.getElementById('loginPage').style.display = 'none';
+  loading.style.display = 'flex';
 
   // Prepara dados do usuário
   document.getElementById('userName').textContent = nome;
@@ -1302,11 +1312,14 @@ async function mostrarApp(nome, funcao) {
     console.warn('Não foi possível buscar configs do Supabase:', e.message);
   }
 
-  // 2. Pull do Google Sheets
+  // 2. Pull do Google Sheets (com timeout de 8s para não travar)
   if(GAS_URL) {
     setMsg('Sincronizando dados...');
     try {
-      await pullFromSheets();
+      await Promise.race([
+        pullFromSheets(),
+        new Promise(r => setTimeout(r, 8000)) // timeout de segurança
+      ]);
     } catch(e) {
       console.warn('Pull falhou:', e.message);
     }
@@ -1316,14 +1329,22 @@ async function mostrarApp(nome, funcao) {
 
   // 3. Renderiza tudo e mostra o app
   setMsg('Preparando painel...');
-  await new Promise(r => setTimeout(r, 300)); // pequena pausa para o spinner não piscar
-  renderAll();
+  try { renderAll(); } catch(e) { console.warn('renderAll erro:', e); }
 
+  clearTimeout(emergencia);
   loading.style.display = 'none';
   document.getElementById('appShell').style.display = 'flex';
 
   if(GAS_URL) iniciarAutoSync();
   else showSyncBadge('offline');
+
+  } catch(e) {
+    console.error('mostrarApp erro crítico:', e);
+    clearTimeout(emergencia);
+    if(loading) loading.style.display = 'none';
+    document.getElementById('appShell').style.display = 'flex';
+    try { renderAll(); } catch(_) {}
+  }
 }
 
 // GAS_URL — carregada do Supabase ao iniciar (fallback: localStorage)
