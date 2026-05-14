@@ -453,8 +453,8 @@ td.mono { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight
       </div>
 
       <div class="nav-section-label">Agenda</div>
-      <div class="nav-item" onclick="navigate('atividades',this)">
-        <span class="nav-icon">📅</span> Atividades & Eventos
+      <div class="nav-item" onclick="window.open('https://ruja-app.lovable.app/','_blank')">
+        <span class="nav-icon">🌐</span> Agenda Pública
       </div>
       <div class="nav-item" onclick="navigate('aniversarios',this)">
         <span class="nav-icon">🎂</span> Aniversários
@@ -579,40 +579,6 @@ td.mono { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight
         </div>
       </div>
 
-
-      <!-- ═══ ATIVIDADES & EVENTOS ═══ -->
-      <div class="page" id="page-atividades">
-        <div class="kpi-grid" style="margin-bottom:20px" id="ativKpis"></div>
-
-        <!-- Link público -->
-        <div style="display:flex;align-items:center;justify-content:space-between;background:linear-gradient(135deg,var(--card) 0%,rgba(212,43,43,0.06) 100%);border:1px solid var(--border2);border-radius:12px;padding:14px 20px;margin-bottom:16px;flex-wrap:wrap;gap:10px">
-          <div style="display:flex;align-items:center;gap:12px">
-            <span style="font-size:22px">🌐</span>
-            <div>
-              <div style="font-size:13px;font-weight:700">Agenda Pública da RUJA</div>
-              <div style="font-size:11px;color:var(--text3)">Compartilhe com os jovens — sem precisar de login</div>
-            </div>
-          </div>
-          <div style="display:flex;gap:8px">
-            <button class="btn btn-ghost btn-sm" onclick="copiarLinkPublico()" title="Copiar link">📋 Copiar link</button>
-            <a href="https://ruja-app.lovable.app/" target="_blank" class="btn btn-primary btn-sm" style="text-decoration:none;display:flex;align-items:center;gap:6px">🔗 Ver agenda pública</a>
-          </div>
-        </div>
-
-        <!-- Alertas de cancelamento -->
-        <div id="ativAlertas" style="margin-bottom:16px"></div>
-
-        <!-- Tabs -->
-        <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap">
-          <button class="filter-tab active" onclick="switchAtivTab('todas',this)">Todas</button>
-          <button class="filter-tab" onclick="switchAtivTab('aprovado',this)">✅ Aprovadas</button>
-          <button class="filter-tab" onclick="switchAtivTab('pendente',this)">⏳ Pendentes</button>
-          <button class="filter-tab" onclick="switchAtivTab('cancelado',this)">❌ Canceladas</button>
-        </div>
-
-        <!-- Lista de atividades -->
-        <div id="ativLista"></div>
-      </div>
 
       <!-- ═══ ANIVERSÁRIOS ═══ -->
       <div class="page" id="page-aniversarios">
@@ -862,7 +828,6 @@ td.mono { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight
               <button class="btn btn-ghost btn-sm" onclick="exportCSV('lideres')">⭐ Líderes</button>
               <button class="btn btn-ghost btn-sm" onclick="exportCSV('departamentos')">🏛️ Departamentos</button>
               <button class="btn btn-ghost btn-sm" onclick="exportCSV('frequencias')">📅 Frequências</button>
-              <button class="btn btn-ghost btn-sm" onclick="exportCSV('atividades')">🎯 Atividades</button>
               <button class="btn btn-primary btn-sm" onclick="exportCSVTudo()">📦 Exportar Tudo</button>
             </div>
           </div>
@@ -876,7 +841,6 @@ td.mono { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight
                 <option value="lideres">⭐ Líderes</option>
                 <option value="departamentos">🏛️ Departamentos</option>
                 <option value="frequencias">📅 Frequências</option>
-                <option value="atividades">🎯 Atividades</option>
               </select>
               <label class="btn btn-ghost btn-sm" style="cursor:pointer">
                 📁 Escolher arquivo
@@ -910,84 +874,6 @@ td.mono { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight
 <!-- ════════════ MODAIS ════════════ -->
 
 
-<!-- Modal Atividade -->
-<div class="modal-backdrop" id="modalAtividade">
-  <div class="modal" style="max-width:580px">
-    <div class="modal-title">
-      <span id="modalAtivTitle">Nova Atividade</span>
-      <button class="modal-close" onclick="closeModal('modalAtividade')">✕</button>
-    </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label class="form-label">Título *</label>
-        <input type="text" class="form-input" id="atTitulo" placeholder="Ex: Culto de Jovens, Retiro...">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Tipo</label>
-        <select class="form-select" id="atTipo">
-          <option value="evento">🎯 Evento</option>
-          <option value="culto">⛪ Culto</option>
-          <option value="retiro">🏕️ Retiro</option>
-          <option value="reuniao">📋 Reunião</option>
-          <option value="acao">🤝 Ação Social</option>
-          <option value="outro">📌 Outro</option>
-        </select>
-      </div>
-    </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label class="form-label">Data *</label>
-        <input type="text" class="form-input date-mask" id="atData" placeholder="DD/MM/AAAA" maxlength="10" autocomplete="off" oninput="maskDate(this)">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Horário</label>
-        <input type="time" class="form-input" id="atHorario">
-      </div>
-    </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label class="form-label">Local</label>
-        <input type="text" class="form-input" id="atLocal" placeholder="Ex: Igreja Central, Online...">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Responsável</label>
-        <select class="form-select" id="atResponsavel"></select>
-      </div>
-    </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label class="form-label">Departamento</label>
-        <select class="form-select" id="atDepartamento">
-          <option value="">Geral (todos)</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Status</label>
-        <select class="form-select" id="atStatus">
-          <option value="pendente">⏳ Pendente Aprovação</option>
-          <option value="aprovado">✅ Aprovado</option>
-          <option value="cancelado">❌ Cancelado</option>
-        </select>
-      </div>
-    </div>
-    <div class="form-group">
-      <label class="form-label">Hierarquia / Prioridade</label>
-      <select class="form-select" id="atHierarquia">
-        <option value="ministerio">🦁 Ministério (toda RUJA)</option>
-        <option value="departamento">🏛️ Departamento</option>
-        <option value="celula">👥 Célula / Grupo</option>
-      </select>
-    </div>
-    <div class="form-group">
-      <label class="form-label">Descrição / Observação</label>
-      <textarea class="form-textarea" id="atDesc" placeholder="Detalhes da atividade..."></textarea>
-    </div>
-    <div class="form-footer">
-      <button class="btn btn-ghost" onclick="closeModal('modalAtividade')">Cancelar</button>
-      <button class="btn btn-primary" onclick="saveAtividade()">Salvar</button>
-    </div>
-  </div>
-</div>
 
 <!-- Modal Jovem -->
 <div class="modal-backdrop" id="modalJovem">
@@ -1529,7 +1415,6 @@ let departamentos = JSON.parse(localStorage.getItem('departamentos')||'null') ||
 let lideres       = JSON.parse(localStorage.getItem('lideres')||'null') || [];
 let liderSupremo  = JSON.parse(localStorage.getItem('liderSupremo')||'null') || { nome:'', contato:'', instagram:'', foto:'', descricao:'', dataPosseLider:'', versiculoLider:'', visao:'', tempoNaRuja:'' };
 let regras        = JSON.parse(localStorage.getItem('regras')||'null') || { ativo:75, oscilando:40, risco:3 };
-let atividades    = JSON.parse(localStorage.getItem('atividades')||'null') || [];
 let metas         = JSON.parse(localStorage.getItem('metas')||'null') || { ativosDepto:20, batizadosDepto:10 };
 let historicoMensal = JSON.parse(localStorage.getItem('historicoMensal')||'null') || [];
 
@@ -1540,7 +1425,6 @@ let currentPage='dashboard', editingId=null, editingRecupId=null, editingDeptoId
 
 const pageTitles = {
   dashboard:['Dashboard','Visão geral dos jovens'],
-  atividades:['Atividades & Eventos','Gestão de atividades e eventos'],
   aniversarios:['Aniversários','Parabéns e mensagens especiais'],
   alertas:['Alertas','Jovens que precisam de atenção agora'],
   metas:['Metas & Crescimento','Acompanhamento de metas e evolução'],
@@ -1599,7 +1483,6 @@ function saveData() {
   localStorage.setItem('lideres',JSON.stringify(lideres));
   localStorage.setItem('liderSupremo',JSON.stringify(liderSupremo));
   localStorage.setItem('metas',JSON.stringify(metas));
-  localStorage.setItem('atividades',JSON.stringify(atividades));
   gravarSnapshotMensal();
   schedulePush();
   marcarDadosSujos();
@@ -1832,523 +1715,6 @@ function renderMetas() {
     : `<tr><td colspan="4" style="text-align:center;color:var(--text3);padding:24px">Nenhum batizado ativo em departamento</td></tr>`;
 }
 
-
-// ═══════════════════════════════════════════════════════════════
-// ATIVIDADES & EVENTOS
-// ═══════════════════════════════════════════════════════════════
-
-let activeAtivTab   = 'todas';
-let editingAtivId   = null;
-let anivSelecionado = null;
-let activeAnivTab   = 'mes';
-
-const TIPO_LABEL = {
-  evento:'🎯 Evento', culto:'⛪ Culto', retiro:'🏕️ Retiro',
-  reuniao:'📋 Reunião', acao:'🤝 Ação Social', outro:'📌 Outro',
-};
-const HIER_LABEL = {
-  ministerio:'🦁 Ministério', departamento:'🏛️ Departamento', celula:'👥 Célula',
-};
-const STATUS_COR = { aprovado:'green', pendente:'yellow', cancelado:'red' };
-const STATUS_LABEL = { aprovado:'✅ Aprovado', pendente:'⏳ Pendente', cancelado:'❌ Cancelado' };
-
-function copiarLinkPublico() {
-  const url = 'https://ruja-app.lovable.app/';
-  navigator.clipboard.writeText(url).then(()=>showToast('Link copiado!')).catch(()=>{
-    const ta = document.createElement('textarea');
-    ta.value = url; document.body.appendChild(ta);
-    ta.select(); document.execCommand('copy');
-    document.body.removeChild(ta); showToast('Link copiado!');
-  });
-}
-
-function switchAtivTab(tab, el) {
-  activeAtivTab = tab;
-  document.querySelectorAll('#page-atividades .filter-tab').forEach(t=>t.classList.remove('active'));
-  if(el) el.classList.add('active');
-  renderAtividades();
-}
-
-function renderAtividades() {
-  // KPIs
-  const total     = atividades.length;
-  const aprovadas = atividades.filter(a=>a.status==='aprovado').length;
-  const pendentes = atividades.filter(a=>a.status==='pendente').length;
-  const canceladas= atividades.filter(a=>a.status==='cancelado').length;
-
-  document.getElementById('ativKpis').innerHTML = [
-    { label:'Total de Atividades', value:total,     cls:''       },
-    { label:'✅ Aprovadas',        value:aprovadas, cls:'green'  },
-    { label:'⏳ Pendentes',        value:pendentes, cls:'yellow' },
-    { label:'❌ Canceladas',       value:canceladas,cls:'red'    },
-  ].map(k=>`<div class="kpi-card"><div class="kpi-label">${k.label}</div><div class="kpi-value ${k.cls}">${k.value}</div></div>`).join('');
-
-  // Alertas de cancelamento
-  const cancels = atividades.filter(a=>a.status==='cancelado');
-  document.getElementById('ativAlertas').innerHTML = cancels.length
-    ? cancels.map(a=>`
-        <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:rgba(212,43,43,0.08);border:1px solid rgba(212,43,43,0.3);border-radius:10px;margin-bottom:8px">
-          <span style="font-size:20px">🚨</span>
-          <div style="flex:1">
-            <div style="font-weight:700;color:var(--red)">Atividade Cancelada: ${a.titulo}</div>
-            <div style="font-size:12px;color:var(--text3)">${formatarData(a.data)} · ${a.local||'Local não definido'}</div>
-          </div>
-          <button class="btn btn-ghost btn-sm" onclick="reativarAtiv(${a.id})">Reativar</button>
-        </div>`).join('')
-    : '';
-
-  // Lista filtrada
-  let lista = [...atividades].sort((a,b)=>a.data.localeCompare(b.data));
-  if(activeAtivTab !== 'todas') lista = lista.filter(a=>a.status===activeAtivTab);
-
-  document.getElementById('ativLista').innerHTML = lista.length ? lista.map(a=>`
-    <div class="ativ-card ${a.status}">
-      <div class="ativ-header">
-        <div style="flex:1">
-          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-            <span class="ativ-tipo-badge badge-${STATUS_COR[a.status]}">${STATUS_LABEL[a.status]}</span>
-            <span class="badge badge-gray">${TIPO_LABEL[a.tipo]||a.tipo}</span>
-            <span class="badge badge-blue">${HIER_LABEL[a.hierarquia]||a.hierarquia}</span>
-            ${a.departamento?`<span class="badge badge-gray">${a.departamento}</span>`:''}
-          </div>
-          <div class="ativ-titulo">${a.titulo}</div>
-          <div class="ativ-meta">
-            <span>📅 ${formatarData(a.data)}</span>
-            ${a.horario?`<span>🕐 ${a.horario}</span>`:''}
-            ${a.local?`<span>📍 ${a.local}</span>`:''}
-            ${a.responsavel?`<span>👤 ${a.responsavel}</span>`:''}
-          </div>
-          ${a.desc?`<div style="font-size:12px;color:var(--text2);margin-top:8px">${a.desc}</div>`:''}
-          ${a.status==='aprovado'&&a.aprovadoPor?`
-            <div style="margin-top:8px;font-size:11px;color:var(--green);display:flex;align-items:center;gap:6px">
-              ✔️ Aprovado por <strong>${a.aprovadoPor}</strong>
-              ${a.aprovadoEm?`· ${new Date(a.aprovadoEm).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})}`:''}
-            </div>`:''}
-          ${a.status==='cancelado'&&a.canceladoPor?`
-            <div style="margin-top:8px;font-size:11px;color:var(--red);display:flex;align-items:center;gap:6px">
-              ✖️ Cancelado por <strong>${a.canceladoPor}</strong>
-              ${a.canceladoEm?`· ${new Date(a.canceladoEm).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})}`:''}
-            </div>`:''}
-        </div>
-      </div>
-      <div class="ativ-footer">
-        <div class="ativ-acoes">
-          ${a.status==='pendente'?`
-            <button class="btn btn-primary btn-sm" onclick="aprovarAtiv(${a.id})">✅ Aprovar</button>
-            <button class="btn btn-danger btn-sm" onclick="cancelarAtiv(${a.id})">❌ Cancelar</button>
-          `:''}
-          ${a.status==='aprovado'?`
-            <button class="btn btn-success btn-sm" onclick="enviarMsgAtividade(${a.id},'aprovado')" title="Abrir WhatsApp com mensagem de confirmação" style="background:rgba(34,197,94,0.15);color:var(--green);border:1px solid rgba(34,197,94,0.3)">📱 Avisar no WhatsApp</button>
-            <button class="btn btn-ghost btn-sm" onclick="copiarMsgAtividade(${a.id},'aprovado')" title="Copiar mensagem">📋 Copiar msg</button>
-            <button class="btn btn-danger btn-sm" onclick="cancelarAtiv(${a.id})">❌ Cancelar</button>
-          `:''}
-          ${a.status==='cancelado'?`
-            <button class="btn btn-sm" onclick="enviarMsgAtividade(${a.id},'cancelado')" title="Abrir WhatsApp com mensagem de cancelamento" style="background:rgba(212,43,43,0.12);color:var(--red);border:1px solid rgba(212,43,43,0.3)">📱 Avisar Cancelamento</button>
-            <button class="btn btn-ghost btn-sm" onclick="copiarMsgAtividade(${a.id},'cancelado')" title="Copiar mensagem">📋 Copiar msg</button>
-            <button class="btn btn-ghost btn-sm" onclick="reativarAtiv(${a.id})">🔄 Reativar</button>
-          `:''}
-        </div>
-        <div class="td-actions">
-          <button class="action-btn" onclick="editAtiv(${a.id})" title="Editar">✏️</button>
-          <button class="action-btn del" onclick="deleteAtiv(${a.id})" title="Excluir">🗑️</button>
-        </div>
-      </div>
-    </div>`).join('')
-  : `<div class="empty-state"><div class="icon">📅</div><p>Nenhuma atividade encontrada</p></div>`;
-}
-
-function formatarData(d) {
-  if(!d) return '—';
-  const [y,m,day] = d.split('-');
-  const meses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
-  return `${day}/${meses[parseInt(m)-1]}/${y}`;
-}
-
-// CRUD atividades
-function saveAtividade() {
-  const val = {
-    titulo:      document.getElementById('atTitulo').value.trim(),
-    tipo:        document.getElementById('atTipo').value,
-    data:        document.getElementById('atData').value,
-    horario:     document.getElementById('atHorario').value,
-    local:       document.getElementById('atLocal').value.trim(),
-    responsavel: document.getElementById('atResponsavel').value,
-    departamento:document.getElementById('atDepartamento').value,
-    hierarquia:  document.getElementById('atHierarquia').value,
-    status:      document.getElementById('atStatus').value,
-    desc:        document.getElementById('atDesc').value.trim(),
-  };
-  if(!val.titulo||!val.data) return alert('Preencha Título e Data.');
-  if(editingAtivId) {
-    const i=atividades.findIndex(a=>a.id===editingAtivId);
-    if(i!==-1) atividades[i]={...atividades[i],...val};
-    editingAtivId=null;
-  } else { val.id=Date.now(); atividades.push(val); }
-  saveData(); closeModal('modalAtividade'); showToast('Atividade salva!'); renderAtividades();
-}
-
-function editAtiv(id) {
-  const a=atividades.find(x=>x.id===id); if(!a) return;
-  editingAtivId=id;
-  openModal('modalAtividade');
-  setTimeout(()=>{
-    document.getElementById('atTitulo').value=a.titulo;
-    document.getElementById('atTipo').value=a.tipo;
-    document.getElementById('atData').value=a.data;
-    document.getElementById('atHorario').value=a.horario||'';
-    document.getElementById('atLocal').value=a.local||'';
-    document.getElementById('atResponsavel').value=a.responsavel||'';
-    document.getElementById('atDepartamento').value=a.departamento||'';
-    document.getElementById('atHierarquia').value=a.hierarquia||'ministerio';
-    document.getElementById('atStatus').value=a.status;
-    document.getElementById('atDesc').value=a.desc||'';
-    document.getElementById('modalAtivTitle').textContent='Editar Atividade';
-  },50);
-}
-
-function aprovarAtiv(id) {
-  const a=atividades.find(x=>x.id===id); if(!a) return;
-  const agora = new Date();
-  a.status='aprovado';
-  a.aprovadoPor = document.getElementById('userName')?.textContent || 'Líder';
-  a.aprovadoEm  = agora.toISOString();
-  saveData(); renderAtividades(); showToast('✅ Atividade aprovada!');
-}
-function cancelarAtiv(id) {
-  if(!confirm('Cancelar esta atividade?')) return;
-  const a=atividades.find(x=>x.id===id); if(!a) return;
-  const agora = new Date();
-  a.status='cancelado';
-  a.canceladoPor = document.getElementById('userName')?.textContent || 'Líder';
-  a.canceladoEm  = agora.toISOString();
-  saveData(); renderAtividades(); showToast('❌ Atividade cancelada');
-}
-function reativarAtiv(id) {
-  const a=atividades.find(x=>x.id===id); if(!a) return;
-  a.status='pendente';
-  a.aprovadoPor=undefined; a.aprovadoEm=undefined;
-  a.canceladoPor=undefined; a.canceladoEm=undefined;
-  saveData(); renderAtividades(); showToast('🔄 Atividade reativada');
-}
-
-function getMsgAtividade(a, tipo) {
-  const dataEvento  = formatarData(a.data);
-  const horario     = a.horario ? ` às ${a.horario}` : '';
-  const local       = a.local   ? `\n📍 Local: ${a.local}` : '';
-  const depto       = a.departamento ? `\n🏛️ Departamento: ${a.departamento}` : '';
-  const resp        = a.responsavel  ? `\n👤 Responsável: ${a.responsavel}`  : '';
-  const desc        = a.desc         ? `\n\n📝 ${a.desc}` : '';
-
-  if(tipo === 'aprovado') {
-    const quem    = a.aprovadoPor || 'Liderança';
-    const quando  = a.aprovadoEm
-      ? new Date(a.aprovadoEm).toLocaleString('pt-BR', {dateStyle:'short', timeStyle:'short'})
-      : '';
-    return `✅ *ATIVIDADE CONFIRMADA!*\n\n` +
-      `🦁 *${a.titulo}*\n` +
-      `📅 Data: ${dataEvento}${horario}${local}${depto}${resp}${desc}\n\n` +
-      `━━━━━━━━━━━━━━━━━━━━\n` +
-      `✔️ Aprovado por: *${quem}*\n` +
-      `🕐 Em: ${quando}\n\n` +
-      `_Contamos com a presença de todos!_ 🙌\n` +
-      `🦁 *RUJA — Rede UniJovem ADJA*`;
-  } else {
-    const quem    = a.canceladoPor || 'Liderança';
-    const quando  = a.canceladoEm
-      ? new Date(a.canceladoEm).toLocaleString('pt-BR', {dateStyle:'short', timeStyle:'short'})
-      : '';
-    return `❌ *ATIVIDADE CANCELADA*\n\n` +
-      `🦁 *${a.titulo}*\n` +
-      `📅 Data prevista: ${dataEvento}${horario}${local}${depto}${desc}\n\n` +
-      `━━━━━━━━━━━━━━━━━━━━\n` +
-      `✖️ Cancelado por: *${quem}*\n` +
-      `🕐 Em: ${quando}\n\n` +
-      `_Em breve novas informações. Fiquem atentos!_ 🙏\n` +
-      `🦁 *RUJA — Rede UniJovem ADJA*`;
-  }
-}
-
-function enviarMsgAtividade(id, tipo) {
-  const a = atividades.find(x=>x.id===id); if(!a) return;
-  const msg = getMsgAtividade(a, tipo);
-  const url = `https://wa.me/?text=${encodeURIComponent(msg)}`;
-  window.open(url, '_blank');
-}
-
-function copiarMsgAtividade(id, tipo) {
-  const a = atividades.find(x=>x.id===id); if(!a) return;
-  const msg = getMsgAtividade(a, tipo);
-  navigator.clipboard.writeText(msg)
-    .then(()=>showToast('Mensagem copiada!'))
-    .catch(()=>{
-      const ta=document.createElement('textarea'); ta.value=msg;
-      document.body.appendChild(ta); ta.select(); document.execCommand('copy');
-      document.body.removeChild(ta); showToast('Mensagem copiada!');
-    });
-}
-
-// ══════════════════════════════════════════════════════════════════════════════
-// MÁSCARA DE DATA — DD/MM/AAAA com suporte a Ctrl+V
-// ══════════════════════════════════════════════════════════════════════════════
-function maskDate(el) {
-  let v = el.value.replace(/\D/g,'');
-  if(v.length > 8) v = v.slice(0,8);
-  if(v.length >= 5)      v = v.slice(0,2)+'/'+v.slice(2,4)+'/'+v.slice(4);
-  else if(v.length >= 3) v = v.slice(0,2)+'/'+v.slice(2);
-  el.value = v;
-  // Valida e destaca em vermelho se data inválida (só quando completa)
-  if(v.length === 10) {
-    const iso = dateToISO(v);
-    el.style.borderColor = iso ? '' : 'var(--red)';
-  } else {
-    el.style.borderColor = '';
-  }
-}
-
-// Normaliza colagem de vários formatos para DD/MM/AAAA
-function normalizePastedDate(raw) {
-  raw = raw.trim();
-  // Já está em DD/MM/AAAA
-  if(/^\d{2}\/\d{2}\/\d{4}$/.test(raw)) return raw;
-  // AAAA-MM-DD (ISO)
-  if(/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
-    const [y,m,d] = raw.split('-');
-    return d+'/'+m+'/'+y;
-  }
-  // DD-MM-AAAA
-  if(/^\d{2}-\d{2}-\d{4}$/.test(raw)) return raw.replace(/-/g,'/');
-  // DDMMAAAA (sem separador)
-  if(/^\d{8}$/.test(raw)) return raw.slice(0,2)+'/'+raw.slice(2,4)+'/'+raw.slice(4);
-  return null;
-}
-
-// Converte DD/MM/AAAA → AAAA-MM-DD (ISO) para salvar internamente
-function dateToISO(v) {
-  if(!v || v.length !== 10) return '';
-  const [d,m,y] = v.split('/');
-  if(!d||!m||!y||y.length!==4) return '';
-  const dt = new Date(+y, +m-1, +d);
-  if(isNaN(dt)||dt.getMonth()!==+m-1||dt.getDate()!==+d) return '';
-  return y+'-'+m.padStart(2,'0')+'-'+d.padStart(2,'0');
-}
-
-// Converte AAAA-MM-DD → DD/MM/AAAA para exibir no campo
-function dateFromISO(iso) {
-  if(!iso || iso.length < 10) return iso||'';
-  const [y,m,d] = iso.split('-');
-  return (d||'')+'/'+(m||'')+'/'+(y||'');
-}
-
-// Intercepta paste em todos os campos .date-mask
-document.addEventListener('paste', function(e) {
-  const el = e.target;
-  if(!el.classList.contains('date-mask')) return;
-  e.preventDefault();
-  const raw = (e.clipboardData||window.clipboardData).getData('text');
-  const norm = normalizePastedDate(raw);
-  if(norm) {
-    el.value = norm;
-    el.dispatchEvent(new Event('input'));
-  } else {
-    // Cola o texto bruto e aplica máscara
-    el.value = raw.replace(/\D/g,'');
-    maskDate(el);
-    el.dispatchEvent(new Event('input'));
-  }
-});
-
-// ══════════════════════════════════════════════════════════════════════════════
-// CÁLCULO BIDIRECIONAL — Idade ↔ Data de Nascimento
-// ══════════════════════════════════════════════════════════════════════════════
-function calcIdadeFromNasc() {
-  const raw  = document.getElementById('jDataNasc').value;
-  const iso  = dateToISO(raw);
-  if(!iso) return;
-  const hoje = new Date();
-  const n    = new Date(iso);
-  let idade  = hoje.getFullYear() - n.getFullYear();
-  if(hoje.getMonth() < n.getMonth() || (hoje.getMonth()===n.getMonth() && hoje.getDate()<n.getDate())) idade--;
-  document.getElementById('jIdade').value = idade >= 0 ? idade : '';
-}
-
-function calcNascFromIdade() {
-  const idade = parseInt(document.getElementById('jIdade').value);
-  if(isNaN(idade) || idade < 1 || idade > 120) return;
-  const hoje    = new Date();
-  const anoNasc = hoje.getFullYear() - idade;
-  // Estimativa: 01/01 do ano calculado em DD/MM/AAAA
-  document.getElementById('jDataNasc').value = '01/01/'+anoNasc;
-}
-
-
-// ══════════════════════════════════════════════════════════════════════════════
-function syncDeptoHidden() {
-  const checks = document.querySelectorAll('#jDepartamentoWrap input[type=checkbox]:checked');
-  const vals   = Array.from(checks).map(c=>c.value);
-  document.getElementById('jDepartamento').value = vals.join(';');
-  // Destaca visualmente os selecionados
-  document.querySelectorAll('#jDepartamentoWrap label').forEach(lbl=>{
-    const chk = lbl.querySelector('input');
-    lbl.style.borderColor   = chk.checked ? 'var(--red)'  : 'var(--border)';
-    lbl.style.background    = chk.checked ? 'var(--red-faint)' : 'var(--black2)';
-    lbl.style.color         = chk.checked ? 'var(--text)'  : '';
-  });
-}
-
-function setDeptoCheckboxes(val) {
-  // val pode ser string simples "Louvor" ou multi "Louvor;Mídia"
-  const vals = val ? val.split(';').map(v=>v.trim()).filter(Boolean) : [];
-  document.querySelectorAll('#jDepartamentoWrap input[type=checkbox]').forEach(chk=>{
-    chk.checked = vals.includes(chk.value);
-  });
-  syncDeptoHidden();
-}
-
-function temDepto(jovem, nome) {
-  if(!jovem.departamento) return false;
-  return jovem.departamento.split(';').map(v=>v.trim()).includes(nome);
-}
-
-function deptosBadges(deptoStr) {
-  if(!deptoStr) return '<span class="badge badge-risco">Sem depto</span>';
-  return deptoStr.split(';').map(v=>v.trim()).filter(Boolean)
-    .map(v=>`<span class="badge badge-blue">${v}</span>`).join(' ');
-}
-
-// ══════════════════════════════════════════════════════════════════════════════
-// CSV — EXPORTAR / IMPORTAR
-// ══════════════════════════════════════════════════════════════════════════════
-const CSV_DATASETS = {
-  jovens:        () => jovens,
-  lideres:       () => lideres,
-  departamentos: () => departamentos,
-  frequencias:   () => frequencias,
-  atividades:    () => atividades,
-};
-
-function csvEscape(v) {
-  if(v === null || v === undefined) return '';
-  const s = String(v);
-  return s.includes(',') || s.includes('"') || s.includes('\n')
-    ? `"${s.replace(/"/g,'""')}"`
-    : s;
-}
-
-function arrayToCSV(data) {
-  if(!data || !data.length) return '';
-  const headers = Object.keys(data[0]);
-  const rows = data.map(r => headers.map(h => csvEscape(r[h])).join(','));
-  return [headers.join(','), ...rows].join('\n');
-}
-
-function downloadCSV(filename, csv) {
-  const bom = '\uFEFF'; // UTF-8 BOM para abrir certo no Excel
-  const blob = new Blob([bom + csv], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = filename;
-  document.body.appendChild(a); a.click();
-  document.body.removeChild(a); URL.revokeObjectURL(url);
-}
-
-function exportCSV(tipo) {
-  const data = CSV_DATASETS[tipo]?.();
-  if(!data || !data.length) { showToast('Nenhum dado para exportar'); return; }
-  const csv = arrayToCSV(data);
-  const hoje = new Date().toISOString().slice(0,10);
-  downloadCSV(`RUJA_${tipo}_${hoje}.csv`, csv);
-  showToast(`✅ ${tipo}.csv exportado!`);
-}
-
-function exportCSVTudo() {
-  const hoje = new Date().toISOString().slice(0,10);
-  Object.entries(CSV_DATASETS).forEach(([tipo, fn]) => {
-    const data = fn();
-    if(data && data.length) downloadCSV(`RUJA_${tipo}_${hoje}.csv`, arrayToCSV(data));
-  });
-  showToast('📦 Todos os CSVs exportados!');
-}
-
-function csvToArray(text) {
-  const lines = text.trim().split('\n');
-  if(lines.length < 2) return [];
-  const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g,''));
-  return lines.slice(1).map(line => {
-    // Suporte a campos com vírgula entre aspas
-    const vals = []; let cur = ''; let inQ = false;
-    for(let i=0; i<line.length; i++) {
-      const c = line[i];
-      if(c==='"') { inQ=!inQ; }
-      else if(c===',' && !inQ) { vals.push(cur.replace(/^"|"$/g,'').replace(/""/g,'"')); cur=''; }
-      else { cur+=c; }
-    }
-    vals.push(cur.replace(/^"|"$/g,'').replace(/""/g,'"'));
-    const obj = {};
-    headers.forEach((h,i) => { obj[h] = vals[i] !== undefined ? vals[i] : ''; });
-    return obj;
-  });
-}
-
-function importCSV(input) {
-  const file = input.files[0]; if(!file) return;
-  const tipo = document.getElementById('csvImportTipo').value;
-  const status = document.getElementById('csvImportStatus');
-  const reader = new FileReader();
-  reader.onload = e => {
-    try {
-      const rows = csvToArray(e.target.result);
-      if(!rows.length) { status.textContent = '⚠️ Arquivo vazio ou inválido'; return; }
-
-      // Gera IDs únicos para registros importados
-      const maxId = (arr) => arr.reduce((m,x) => Math.max(m, Number(x.id)||0), 0);
-
-      if(tipo === 'jovens') {
-        let nextId = maxId(jovens) + 1;
-        rows.forEach(r => { if(!r.id) r.id = nextId++; });
-        const existIds = new Set(jovens.map(j=>String(j.id)));
-        const novos = rows.filter(r => !existIds.has(String(r.id)));
-        jovens = [...jovens, ...novos];
-      } else if(tipo === 'lideres') {
-        let nextId = maxId(lideres) + 1;
-        rows.forEach(r => { if(!r.id) r.id = nextId++; });
-        const existIds = new Set(lideres.map(j=>String(j.id)));
-        lideres = [...lideres, ...rows.filter(r => !existIds.has(String(r.id)))];
-      } else if(tipo === 'departamentos') {
-        let nextId = maxId(departamentos) + 1;
-        rows.forEach(r => { if(!r.id) r.id = nextId++; });
-        const existIds = new Set(departamentos.map(j=>String(j.id)));
-        departamentos = [...departamentos, ...rows.filter(r => !existIds.has(String(r.id)))];
-      } else if(tipo === 'frequencias') {
-        let nextId = maxId(frequencias) + 1;
-        rows.forEach(r => { if(!r.id) r.id = nextId++; });
-        const existIds = new Set(frequencias.map(j=>String(j.id)));
-        frequencias = [...frequencias, ...rows.filter(r => !existIds.has(String(r.id)))];
-      } else if(tipo === 'atividades') {
-        let nextId = maxId(atividades) + 1;
-        rows.forEach(r => { if(!r.id) r.id = nextId++; });
-        const existIds = new Set(atividades.map(j=>String(j.id)));
-        atividades = [...atividades, ...rows.filter(r => !existIds.has(String(r.id)))];
-      }
-
-      saveData(); renderAll();
-      status.style.color = 'var(--green)';
-      status.textContent = `✅ ${rows.length} registros importados!`;
-      showToast(`✅ ${rows.length} registros de ${tipo} importados!`);
-      input.value = '';
-    } catch(err) {
-      status.style.color = 'var(--red)';
-      status.textContent = '❌ Erro ao ler CSV: ' + err.message;
-    }
-  };
-  reader.readAsText(file, 'UTF-8');
-}
-
-
-function deleteAtiv(id) {
-  if(!confirm('Excluir esta atividade?')) return;
-  atividades=atividades.filter(a=>a.id!==id);
-  saveData(); renderAtividades(); showToast('Atividade excluída');
-}
 
 // ═══════════════════════════════════════════════════════════════
 // ANIVERSÁRIOS
@@ -2625,8 +1991,7 @@ function navigate(page,el) {
 }
 function renderAll() { renderPage(currentPage); }
 function renderPage(page) {
-  if(page==='atividades')   renderAtividades();
-  else if(page==='aniversarios') renderAniversarios();
+  if(page==='aniversarios') renderAniversarios();
   else if(page==='dashboard')    renderDashboard();
   else if(page==='metas')   renderMetas();
   else if(page==='alertas') renderAlertas();
@@ -2639,8 +2004,7 @@ function renderPage(page) {
   else if(page==='config')  renderConfig();
 }
 function handleAddBtn() {
-  if(currentPage==='atividades')    openModal('modalAtividade');
-  else if(currentPage==='jovens')       openModal('modalJovem');
+  if(currentPage==='jovens')       openModal('modalJovem');
   else if(currentPage==='frequencia')  openModal('modalFreq');
   else if(currentPage==='recuperacao') openModal('modalRecup');
   else if(currentPage==='departamentos') openModal('modalDepto');
