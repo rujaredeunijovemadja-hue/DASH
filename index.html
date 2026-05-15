@@ -1553,9 +1553,9 @@ async function syncManual() {
       console.error('Push resposta inválida (não é JSON):', text.slice(0,300));
       showSyncBadge('error'); syncPending = false; return;
     }
-    console.log('Push resposta GAS:', d);
+    console.log('Push resposta GAS:', JSON.stringify(d));
     if(d.ok) { dadosSujos = false; limparAvisoPendente(); showSyncBadge('ok'); }
-    else { console.error('Push erro GAS:', d.erro||d); showSyncBadge('error'); }
+    else { console.error('Push erro GAS completo:', JSON.stringify(d)); showSyncBadge('error'); }
   } catch(e) {
     clearTimeout(timer);
     console.error('Push falhou:', e.message);
