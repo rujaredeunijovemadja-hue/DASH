@@ -1453,7 +1453,7 @@ async function pullFromSheets(forcar=false, silencioso=false) {
 
   // AbortController com timeout de 10s
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 10000);
+  const timer = setTimeout(() => controller.abort(), 30000);
 
   try {
     const r = await fetch(GAS_URL, { signal: controller.signal });
