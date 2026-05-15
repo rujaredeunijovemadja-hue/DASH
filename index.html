@@ -1535,18 +1535,32 @@ function showSyncBadge(s) {
 
 async function syncManual() {
   if(syncPending) return;
+  syncPending = true;
   showSyncBadge('syncing');
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15000);
   try {
-    const r = await fetch(GAS_URL, { method:'POST', body: JSON.stringify({
+    const r = await fetch(GAS_URL, { method:'POST', signal: controller.signal, body: JSON.stringify({
       action:'push',
       jovens, frequencias, recuperacoes, departamentos, lideres,
       historicoMensal, metas, regras, liderSupremo,
       usuario: document.getElementById('userName')?.textContent || 'Dashboard',
     }) });
-    const d = await r.json();
-    if(d.ok) { dadosSujos = false; limparAvisoPendente(); }
-    showSyncBadge(d.ok ? 'ok' : 'error');
-  } catch(e) { showSyncBadge('error'); }
+    clearTimeout(timer);
+    const text = await r.text();
+    let d;
+    try { d = JSON.parse(text); } catch(e) {
+      console.error('Push resposta inválida (não é JSON):', text.slice(0,300));
+      showSyncBadge('error'); syncPending = false; return;
+    }
+    console.log('Push resposta GAS:', d);
+    if(d.ok) { dadosSujos = false; limparAvisoPendente(); showSyncBadge('ok'); }
+    else { console.error('Push erro GAS:', d.erro||d); showSyncBadge('error'); }
+  } catch(e) {
+    clearTimeout(timer);
+    console.error('Push falhou:', e.message);
+    showSyncBadge('error');
+  } finally { syncPending = false; }
 }
 function saveGasUrl() {
   const u=document.getElementById('gasUrlInput').value.trim();
