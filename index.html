@@ -1620,6 +1620,85 @@ function maskDate(el) {
   el.value = v.slice(0,10);
 }
 
+// Calcula idade a partir da data de nascimento preenchida
+function calcIdadeFromNasc() {
+  const nasc = document.getElementById('jDataNasc').value;
+  if(!nasc || nasc.length < 10) return;
+  const idade = getIdade(dateToISO(nasc));
+  if(idade > 0 && idade < 100) {
+    const el = document.getElementById('jIdade');
+    if(el) el.value = idade;
+  }
+}
+
+// Calcula data de nascimento aproximada a partir da idade
+function calcNascFromIdade() {
+  const idade = parseInt(document.getElementById('jIdade').value);
+  if(!idade || idade < 1 || idade > 100) return;
+  const ano = new Date().getFullYear() - idade;
+  const el = document.getElementById('jDataNasc');
+  if(el && !el.value) el.value = `01/01/${ano}`;
+}
+
+// Renderiza checkboxes de departamento no modal do jovem
+function renderDeptoCheckboxes(selecionados) {
+  const wrap = document.getElementById('jDepartamentoWrap');
+  if(!wrap) return;
+  if(!departamentos.length) {
+    wrap.innerHTML = '<span style="font-size:12px;color:var(--text3)">Nenhum departamento cadastrado.</span>';
+    return;
+  }
+  const sel = typeof selecionados === 'string'
+    ? selecionados.split(';').map(s=>s.trim()).filter(Boolean)
+    : (selecionados || []);
+
+  wrap.innerHTML = departamentos.map(d => {
+    const checked = sel.includes(d.nome);
+    return `<label style="display:flex;align-items:center;gap:6px;padding:4px 10px;border-radius:20px;border:1px solid ${checked?'var(--red)':'var(--border)'};background:${checked?'rgba(212,43,43,0.1)':'transparent'};cursor:pointer;font-size:12px;font-weight:600;transition:all 0.15s" onclick="toggleDeptoCheck(this,'${d.nome}')">
+      <input type="checkbox" ${checked?'checked':''} style="display:none"> ${d.icone||'🏛'} ${d.nome}
+    </label>`;
+  }).join('');
+  syncDeptoHidden();
+}
+
+function toggleDeptoCheck(label, nome) {
+  const cb = label.querySelector('input[type=checkbox]');
+  cb.checked = !cb.checked;
+  if(cb.checked) {
+    label.style.border = '1px solid var(--red)';
+    label.style.background = 'rgba(212,43,43,0.1)';
+  } else {
+    label.style.border = '1px solid var(--border)';
+    label.style.background = 'transparent';
+  }
+  syncDeptoHidden();
+}
+
+function syncDeptoHidden() {
+  const wrap = document.getElementById('jDepartamentoWrap');
+  if(!wrap) return;
+  const nomes = [...wrap.querySelectorAll('input[type=checkbox]:checked')]
+    .map(cb => cb.value).filter(Boolean);
+  document.getElementById('jDepartamento').value = nomes.join(';');
+}
+
+// Marca os checkboxes de departamento ao editar um jovem
+function setDeptoCheckboxes(deptoStr) {
+  const selecionados = (deptoStr||'').split(';').map(s=>s.trim()).filter(Boolean);
+  const wrap = document.getElementById('jDepartamentoWrap');
+  if(!wrap) return;
+  wrap.querySelectorAll('input[type=checkbox]').forEach(cb => {
+    cb.checked = selecionados.includes(cb.value);
+    // Atualiza visual do label
+    const label = cb.closest('label');
+    if(label) {
+      label.style.borderColor = cb.checked ? 'var(--red)' : 'var(--border)';
+      label.style.background  = cb.checked ? 'rgba(212,43,43,0.1)' : 'transparent';
+    }
+  });
+  syncDeptoHidden();
+}
+
 function getStatusBadge(s) {
   if(s==='Ativo')     return '<span class="badge badge-ativo">🟢 Ativo</span>';
   if(s==='Oscilando') return '<span class="badge badge-oscilando">🟡 Oscilando</span>';
