@@ -2783,6 +2783,13 @@ function navigate(page,el) {
   document.getElementById('pageTitle').textContent=t[0];
   document.getElementById('pageSubtitle').textContent=t[1];
   renderPage(page);
+  // Sync bottom nav
+  try {
+    document.querySelectorAll('.bnav-item[data-page]').forEach(b=>{
+      b.classList.toggle('active', b.getAttribute('data-page')===page);
+    });
+    if(isMobile()) setTimeout(()=>renderMobileViews(page), 80);
+  } catch(e){}
 }
 function renderAll() {
   // Renderiza a página atual
@@ -4404,24 +4411,15 @@ function closeSidebar() {
 
 // ─── Bottom Nav navigation ───────────────────────────────────
 function bnavGo(page, el) {
-  // Update bottom nav active state
+  // Sync bottom nav active state
   document.querySelectorAll('.bnav-item').forEach(b=>b.classList.remove('active'));
   if(el) el.classList.add('active');
-  // Sync sidebar nav
-  document.querySelectorAll('.nav-item').forEach(n=>{
-    n.classList.toggle('active', n.getAttribute('onclick') && n.getAttribute('onclick').includes("'"+page+"'"));
-  });
   closeSidebar();
-  // Navigate
-  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  document.getElementById('page-'+page).classList.add('active');
-  currentPage = page;
-  const t = pageTitles[page]||[page,''];
-  document.getElementById('pageTitle').textContent = t[0];
-  document.getElementById('pageSubtitle').textContent = t[1];
-  renderPage(page);
-  // Render mobile views
-  setTimeout(()=>{ try { renderMobileViews(page); } catch(e){} }, 50);
+  // Re-use existing navigate() — finds sidebar nav-item and renders page
+  const sidebarItem = document.querySelector('.nav-item[onclick*="''+page+''"]');
+  navigate(page, sidebarItem);
+  // Render mobile views after navigate
+  if(isMobile()) setTimeout(()=>{ try{ renderMobileViews(page); }catch(e){} }, 80);
 }
 
 // ─── "Mais" menu ─────────────────────────────────────────────
@@ -4462,13 +4460,14 @@ function closeBs() {
 
 // ─── Jovem Quick Actions ─────────────────────────────────────
 function openJovemActions(id) {
-  const j = DATA.jovens.find(x=>x.id===id);
+  const j = jovens.find(x=>x.id===id);
   if(!j) return;
+  const tel = (j.contato||'').replace(/\D/g,'');
   openBs(j.nome || 'Jovem', [
-    { icon:'✏️', label:'Editar cadastro', action:`openModalJovem(${JSON.stringify(id)})` },
-    { icon:'🚑', label:'Plano de recuperação', action:`abrirRecupJovem(${JSON.stringify(id)})` },
-    { icon:'📱', label:'WhatsApp', action:`window.open('https://wa.me/55'+('${j.contato||""}').replace(/\D/g,''))` },
-    { icon:'🗑️', label:'Excluir', action:`deleteJovemConfirm(${JSON.stringify(id)})` },
+    { icon:'✏️', label:'Editar cadastro',       action:'openModalJovem("'+id+'")' },
+    { icon:'🚑', label:'Plano de recuperação',  action:'abrirRecupJovem("'+id+'")' },
+    { icon:'📱', label:'WhatsApp',               action: tel ? 'window.open("https://wa.me/55'+tel+'")' : 'showToast("Sem contato cadastrado")' },
+    { icon:'🗑️', label:'Excluir',               action:'deleteJovemConfirm("'+id+'")' },
   ]);
 }
 function deleteJovemConfirm(id) {
@@ -4487,80 +4486,76 @@ function renderMobileViews(page) {
 function renderJovensMobile() {
   const container = document.getElementById('jovensMobileCards');
   if(!container) return;
-  const search = document.getElementById('jovensSearch');
-  const q = search ? search.value.toLowerCase() : '';
-  let list = DATA.jovens || [];
+  const searchEl = document.getElementById('jovensSearch');
+  const q = searchEl ? searchEl.value.toLowerCase() : '';
+  let list = jovens || [];
   if(q) list = list.filter(j=>(j.nome||'').toLowerCase().includes(q));
-  if(window._statusFilter && window._statusFilter!=='todos')
-    list = list.filter(j=>calcStatus(j.id)===window._statusFilter);
+  if(typeof activeStatusFilter !== 'undefined' && activeStatusFilter && activeStatusFilter!=='todos')
+    list = list.filter(j=>calcStatus(j.id)===activeStatusFilter);
 
   if(list.length===0) {
     container.innerHTML='<div class="empty-state"><div class="icon">👥</div><p>Nenhum jovem encontrado</p></div>';
   } else {
-    container.innerHTML = list.map(j=>{
-      const status = calcStatus(j.id);
-      const freq = getFreqPct(j.id);
-      const initials = (j.nome||'J').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
-      const fotoHtml = j.foto_url
-        ? `<img src="${j.foto_url}" onerror="this.style.display='none'" alt="">`
-        : '';
-      return `<div class="jovem-card-mobile" style="margin-bottom:10px">
-        <div class="jcm-avatar">${fotoHtml}${fotoHtml?'':initials}</div>
-        <div class="jcm-info">
-          <div class="jcm-name">${j.nome||'—'}</div>
-          <div class="jcm-meta">${j.departamentos||'Sem depto'} &middot; ${freq}% presença</div>
-          <div class="jcm-meta" style="margin-top:2px">${getStatusBadge(status)}</div>
-          <div class="jcm-actions">
-            <button class="jcm-action-btn" onclick="openJovemActions('${j.id}')">⋯ Ações</button>
-            ${j.contato?`<button class="jcm-action-btn" onclick="window.open('https://wa.me/55'+('${j.contato}').replace(/\D/g,''))">📱 WhatsApp</button>`:''}
-          </div>
-        </div>
-      </div>`;
+    container.innerHTML = list.map(function(j){
+      var status = calcStatus(j.id);
+      var freq = getFreqPct(j.id);
+      var initials = (j.nome||'J').split(' ').map(function(w){return w[0]||'';}).join('').slice(0,2).toUpperCase();
+      var fotoHtml = j.foto_url ? '<img src="'+j.foto_url+'" onerror="this.style.display='none'" alt="">' : '';
+      var tel = (j.contato||'').replace(/\D/g,'');
+      return '<div class="jovem-card-mobile" style="margin-bottom:10px">' +
+        '<div class="jcm-avatar">' + fotoHtml + (fotoHtml?'':initials) + '</div>' +
+        '<div class="jcm-info">' +
+          '<div class="jcm-name">' + (j.nome||'—') + '</div>' +
+          '<div class="jcm-meta">' + (j.departamento||'Sem depto') + ' &middot; ' + freq + '% pres.</div>' +
+          '<div class="jcm-meta" style="margin-top:2px">' + getStatusBadge(status) + '</div>' +
+          '<div class="jcm-actions">' +
+            '<button class="jcm-action-btn" onclick="openJovemActions('' + j.id + '')">⋯ Ações</button>' +
+            (tel ? '<button class="jcm-action-btn" onclick="window.open('https://wa.me/55' + tel + '')">📱 WA</button>' : '') +
+          '</div>' +
+        '</div>' +
+      '</div>';
     }).join('');
   }
-
-  // Toggle table/cards
   const tableWrap = document.querySelector('#page-jovens .table-wrap');
   if(tableWrap) tableWrap.style.display='none';
   container.style.display='block';
 }
 
-// ─── Recuperação Mobile Cards ────────────────────────────────
 function renderRecupMobile() {
   const container = document.getElementById('recupMobileCards');
   if(!container) return;
-  const list = DATA.recuperacoes || [];
+  const list = recuperacoes || [];
   if(list.length===0) {
     container.innerHTML='<div class="empty-state"><div class="icon">🚑</div><p>Nenhum plano ativo</p></div>';
   } else {
     container.innerHTML = list.map(r=>{
-      const j = DATA.jovens.find(x=>x.id===r.jovemId);
-      const nome = j ? j.nome : (r.jovemNome||'Jovem');
+      const j = jovens.find(x=>x.id===r.jovemId);
+      const nome = j ? j.nome : 'Jovem';
       const tel  = j ? (j.contato||'') : '';
-      return `<div class="recup-card-mobile">
-        <div class="rcm-top">
-          <div>
-            <div class="rcm-name">${nome}</div>
-            <div class="rcm-meta">${r.responsavel||'—'} &middot; Etapa ${r.etapa||1}</div>
-          </div>
-          <span class="badge badge-risco">${r.status||'Ativo'}</span>
-        </div>
-        <div class="rcm-meta" style="margin-bottom:8px">Motivo: ${r.motivo||'—'}</div>
-        <div class="rcm-actions">
-          ${tel?`<button class="rcm-btn rcm-btn-wpp" onclick="window.open('https://wa.me/55'+('${tel}').replace(/\D/g,''))">📱 WhatsApp</button>`:''}
-          <button class="rcm-btn rcm-btn-contact" onclick="openRecupContato('${r.id}')">📝 Contato</button>
-          <button class="rcm-btn rcm-btn-recover" onclick="marcarRecuperado('${r.id}')">✅ Recuperado</button>
-        </div>
-      </div>`;
+      const telClean = tel.replace(/\D/g,'');
+      return '<div class="recup-card-mobile">' +
+        '<div class="rcm-top">' +
+          '<div>' +
+            '<div class="rcm-name">' + nome + '</div>' +
+            '<div class="rcm-meta">' + (r.liderResp||'—') + ' &middot; ' + (r.status||'Ativo') + '</div>' +
+          '</div>' +
+          '<span class="badge badge-risco">' + (r.status||'Ativo') + '</span>' +
+        '</div>' +
+        '<div class="rcm-meta" style="margin-bottom:8px">Motivo: ' + (r.motivo||'—') + '</div>' +
+        '<div class="rcm-actions">' +
+          (telClean ? '<button class="rcm-btn rcm-btn-wpp" onclick="window.open('https://wa.me/55' + telClean + '')">📱 WhatsApp</button>' : '') +
+          '<button class="rcm-btn rcm-btn-recover" onclick="marcarRecuperado('' + r.id + '')">✅ Recuperado</button>' +
+        '</div>' +
+      '</div>';
     }).join('');
   }
-
   const tableWrap = document.querySelector('#page-recuperacao .table-wrap');
   if(tableWrap) tableWrap.style.display='none';
   container.style.display='block';
 }
+
 function openRecupContato(id) {
-  const r = (DATA.recuperacoes||[]).find(x=>x.id===id);
+  const r = (recuperacoes||[]).find(x=>x.id===id);
   if(!r) return;
   const obs = prompt('Registrar observação do contato:', r.proximaAcao||'');
   if(obs===null) return;
@@ -4569,55 +4564,56 @@ function openRecupContato(id) {
 }
 function marcarRecuperado(id) {
   if(!confirm('Marcar como recuperado?')) return;
-  const r = (DATA.recuperacoes||[]).find(x=>x.id===id);
+  const r = (recuperacoes||[]).find(x=>x.id===id);
   if(!r) return;
   r.status = 'Recuperado';
-  upsertRecuperacao(r).then(()=>{ showToast('✅ Marcado como recuperado!'); renderAll(); });
+  upsertRecuperacao(r).then(()=>{
+    showToast('✅ Marcado como recuperado!');
+    renderAll();
+    setTimeout(renderRecupMobile, 200);
+  });
 }
 
 // ─── Frequência Mobile ────────────────────────────────────────
 let _freqPresentes = {};
 function renderFreqMobile() {
-  const container = document.getElementById('freqMobileList');
+  var container = document.getElementById('freqMobileList');
   if(!container) return;
-  let list = DATA.jovens || [];
-
-  if(window._freqFiltro && window._freqFiltro!=='Todos') {
-    if(window._freqFiltro==='SemDepto') list=list.filter(j=>!j.departamentos||j.departamentos.trim()==='');
-    else list=list.filter(j=>(j.departamentos||'').includes(window._freqFiltro));
+  var fil = typeof freqFiltroAtual !== 'undefined' ? freqFiltroAtual : 'Todos';
+  var list = jovens || [];
+  if(fil && fil!=='Todos') {
+    if(fil==='SemDepto') list=list.filter(function(j){return !j.departamento||!j.departamento.trim();});
+    else list=list.filter(function(j){return (j.departamento||'').indexOf(fil)>=0;});
   }
+
+  var headerHtml = '<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">' +
+    '<button class="btn btn-primary" style="flex:1" onclick="marcarTodosPresentes()">✅ Marcar Todos</button>' +
+    '<button class="btn btn-sm" style="background:rgba(212,43,43,0.12);color:var(--red);border:1px solid rgba(212,43,43,0.3);min-height:44px" onclick="salvarFreqLote()">💾 Salvar</button>' +
+    '</div>';
 
   if(list.length===0) {
-    container.innerHTML='<div class="empty-state"><div class="icon">✅</div><p>Nenhum jovem para exibir</p></div>';
+    container.innerHTML='<div class="empty-state"><div class="icon">✅</div><p>Nenhum jovem</p></div>';
   } else {
-    // Botão Marcar Todos
-    const headerHtml = `
-      <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
-        <button class="btn btn-primary" style="flex:1" onclick="marcarTodosPresentes()">✅ Marcar Todos Presentes</button>
-        <button class="btn btn-sm" style="background:rgba(212,43,43,0.12);color:var(--red);border:1px solid rgba(212,43,43,0.3)" onclick="salvarFreqLote()">💾 Salvar</button>
-      </div>`;
-
-    const cards = list.map(j=>{
-      const presente = _freqPresentes[j.id] || false;
-      const freq = getFreqPct(j.id);
-      return `<div class="freq-card-mobile" style="margin-bottom:8px" id="fcm-${j.id}">
-        <div class="fcm-check ${presente?'present':''}" onclick="toggleFreqPresente('${j.id}')">
-          ${presente?'✅':'○'}
-        </div>
-        <div class="fcm-info">
-          <div class="fcm-name">${j.nome||'—'}</div>
-          <div class="fcm-sub">${j.departamentos||'Sem depto'} · ${freq}% presença</div>
-        </div>
-      </div>`;
+    var cards = list.map(function(j){
+      var presente = _freqPresentes[j.id] || false;
+      var freq = getFreqPct(j.id);
+      return '<div class="freq-card-mobile" style="margin-bottom:8px" id="fcm-'+j.id+'">' +
+        '<div class="fcm-check '+(presente?'present':'')+'" onclick="toggleFreqPresente(''+j.id+'')">' +
+          (presente?'✅':'○') +
+        '</div>' +
+        '<div class="fcm-info">' +
+          '<div class="fcm-name">'+(j.nome||'—')+'</div>' +
+          '<div class="fcm-sub">'+(j.departamento||'Sem depto')+' · '+freq+'% pres.</div>' +
+        '</div>' +
+      '</div>';
     }).join('');
-
     container.innerHTML = headerHtml + cards;
   }
-
-  const tableWrap = document.querySelector('#page-frequencia .table-wrap');
+  var tableWrap = document.querySelector('#page-frequencia .table-wrap');
   if(tableWrap) tableWrap.style.display='none';
   container.style.display='block';
 }
+
 function toggleFreqPresente(jovemId) {
   _freqPresentes[jovemId] = !_freqPresentes[jovemId];
   const el = document.getElementById('fcm-'+jovemId);
@@ -4628,7 +4624,7 @@ function toggleFreqPresente(jovemId) {
   check.textContent = present?'✅':'○';
 }
 function marcarTodosPresentes() {
-  let list = DATA.jovens || [];
+  let list = jovens || [];
   if(window._freqFiltro && window._freqFiltro!=='Todos') {
     if(window._freqFiltro==='SemDepto') list=list.filter(j=>!j.departamentos||j.departamentos.trim()==='');
     else list=list.filter(j=>(j.departamentos||'').includes(window._freqFiltro));
@@ -4652,51 +4648,6 @@ async function salvarFreqLote() {
   _freqPresentes = {};
   renderAll();
 }
-
-// ─── Hook into existing navigate ─────────────────────────────
-const _origNavigate = navigate;
-function navigate(page, el) {
-  _origNavigate(page, el);
-  // Sync bottom nav
-  document.querySelectorAll('.bnav-item[data-page]').forEach(b=>{
-    b.classList.toggle('active', b.getAttribute('data-page')===page);
-  });
-  closeSidebar();
-  if(isMobile()) setTimeout(()=>{ try{ renderMobileViews(page); } catch(e){} }, 60);
-}
-
-// ─── Resize handler ───────────────────────────────────────────
-window.addEventListener('resize', ()=>{
-  if(!isMobile()) {
-    // Restore tables
-    document.querySelectorAll('.table-wrap').forEach(t=>t.style.display='');
-    document.querySelectorAll('#jovensMobileCards,#freqMobileList,#recupMobileCards').forEach(c=>{
-      if(c) c.style.display='none';
-    });
-  } else {
-    renderMobileViews(currentPage||'dashboard');
-  }
-});
-
-// ─── Override filterJovens/filterStatus to also refresh mobile ─
-const _origFilterJovens = window.filterJovens;
-function filterJovens(q) {
-  if(_origFilterJovens) _origFilterJovens(q);
-  if(isMobile()) setTimeout(renderJovensMobile,50);
-}
-const _origFilterStatus = window.filterStatus;
-function filterStatus(status, el) {
-  window._statusFilter = status;
-  if(_origFilterStatus) _origFilterStatus(status, el);
-  if(isMobile()) setTimeout(renderJovensMobile,50);
-}
-const _origSetFreqFiltro = window.setFreqFiltro;
-function setFreqFiltro(f, el) {
-  window._freqFiltro = f;
-  if(_origSetFreqFiltro) _origSetFreqFiltro(f, el);
-  if(isMobile()) setTimeout(renderFreqMobile,50);
-}
-// ═══════════════════════════════════════════════════════════════
 
 </script>
 </body>
