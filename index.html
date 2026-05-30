@@ -1273,20 +1273,35 @@ td.mono { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight
 
 <script>
 // ═══════════════════════════════════════════════
-// CONFIG & GAS SYNC
-// ═══════════════════════════════════════════════
-// ═══════════════════════════════════════════════
-// SUPABASE AUTH
-// ═══════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════
+// RUJA — CAMADA DE DADOS SUPABASE
+// Substitui o bloco "CONFIG & GAS SYNC" e "DATA STORE" do index.html
+// Cole este conteúdo no lugar das linhas 1276-1590 do index.html
+// ═══════════════════════════════════════════════════════════════
+
+// ─── SUPABASE CLIENT ───────────────────────────────────────────
 const _SB_URL = 'https://wjdnemfifgquuonwwaua.supabase.co';
 const _SB_KEY = 'sb_publishable_Qcg3wmK3zXaNYvwt90QUkw_IbUerToD';
-// SDK UMD expõe window.supabase
 const sb = window.supabase.createClient(_SB_URL, _SB_KEY);
 
-// Verifica sessão ativa ao carregar
+// ─── DATA STORE (in-memory) ────────────────────────────────────
+let jovens          = [];
+let frequencias     = [];
+let recuperacoes    = [];
+let departamentos   = [];
+let lideres         = [];
+let liderSupremo    = { nome:'', contato:'', instagram:'', foto:'', descricao:'', dataPosseLider:'', versiculoLider:'', visao:'', tempoNaRuja:'' };
+let regras          = { ativo:75, oscilando:40, risco:3 };
+let metas           = { ativosDepto:20, batizadosDepto:10 };
+let historicoMensal = [];
+
+// GAS como backup opcional
+let GAS_URL = '';
+
+// ─── SESSÃO ────────────────────────────────────────────────────
 (async function() {
   const { data: { session } } = await sb.auth.getSession();
-  if(session) {
+  if (session) {
     const user = session.user;
     const meta = user.user_metadata || {};
     const nome = meta.nome || user.email.split('@')[0];
@@ -1295,293 +1310,406 @@ const sb = window.supabase.createClient(_SB_URL, _SB_KEY);
   }
 })();
 
+// ─── HELPERS ──────────────────────────────────────────────────
 function toggleSenha() {
   const inp = document.getElementById('loginPassword');
   const btn = document.getElementById('toggleSenhaBtn');
-  if(inp.type === 'password') { inp.type = 'text'; btn.textContent = '🙈'; }
-  else { inp.type = 'password'; btn.textContent = '👁️'; }
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+  btn.textContent = inp.type === 'password' ? '👁️' : '🙈';
 }
 
 function mostrarErroLogin(msg) {
   const el = document.getElementById('loginError');
-  if(el) { el.textContent = msg; el.style.display = 'block'; }
+  if (el) { el.textContent = msg; el.style.display = 'block'; }
 }
 
 function ocultarErroLogin() {
   const el = document.getElementById('loginError');
-  if(el) el.style.display = 'none';
+  if (el) el.style.display = 'none';
 }
 
+// ─── MOSTRAR APP (carrega dados do Supabase) ───────────────────
 async function mostrarApp(nome, funcao) {
-  const loading = document.getElementById('loadingScreen');
+  const loading    = document.getElementById('loadingScreen');
   const loadingMsg = document.getElementById('loadingMsg');
-  const setMsg = (msg) => { if(loadingMsg) loadingMsg.textContent = msg; };
+  const setMsg = (msg) => { if (loadingMsg) loadingMsg.textContent = msg; };
 
   const forcarAbertura = () => {
-    if(loading) loading.style.display = 'none';
+    if (loading) loading.style.display = 'none';
     document.getElementById('appShell').style.display = 'flex';
   };
 
-  // Segurança absoluta: se travar por mais de 12s, abre mesmo assim
-  const emergencia = setTimeout(forcarAbertura, 12000);
+  const emergencia = setTimeout(forcarAbertura, 15000);
 
   try {
+    document.getElementById('loginPage').style.display = 'none';
+    loading.style.display = 'flex';
+    document.getElementById('userName').textContent    = nome;
+    document.getElementById('userRole').textContent    = funcao;
+    document.getElementById('userAvatar').textContent  = nome.charAt(0).toUpperCase();
 
-  // Esconde login, mostra loading
-  document.getElementById('loginPage').style.display = 'none';
-  loading.style.display = 'flex';
+    // 1. Configs globais (agenda_url, gas_url de backup, metas, regras, lider_supremo)
+    setMsg('Carregando configurações...');
+    await carregarConfigs();
 
-  // Prepara dados do usuário
-  document.getElementById('userName').textContent = nome;
-  document.getElementById('userRole').textContent = funcao;
-  document.getElementById('userAvatar').textContent = nome.charAt(0).toUpperCase();
+    // 2. Carrega todos os dados do Supabase em paralelo
+    setMsg('Carregando dados...');
+    await carregarTodos();
 
-  // 1. Busca configs do Supabase
-  setMsg('Buscando configurações...');
-  try {
-    const { data: configs, error } = await sb.from('config').select('chave, valor');
-    if(error) console.warn('Supabase config erro:', error.message);
-    if(configs && configs.length) {
-      configs.forEach(c => {
-        if(c.chave === 'gas_url' && c.valor) {
-          GAS_URL = c.valor;
-          localStorage.setItem('gasUrl', c.valor);
-          console.log('✅ GAS_URL carregada do Supabase');
-        }
-        if(c.chave === 'agenda_url' && c.valor) {
-          window._agendaUrl = c.valor;
-        }
-      });
-    }
-  } catch(e) {
-    console.warn('Não foi possível buscar configs do Supabase:', e.message);
-  }
+    setMsg('Preparando painel...');
+    try { renderAll(); } catch(e) { console.warn('renderAll erro:', e); }
 
-  // 2. Pull do Google Sheets (tem timeout interno de 10s via AbortController)
-  if(GAS_URL) {
-    setMsg('Sincronizando dados...');
-    try { await pullFromSheets(); } catch(e) { console.warn('Pull falhou:', e.message); }
-  } else {
-    console.warn('GAS_URL não encontrada — sem sincronização');
-  }
-
-  // 3. Renderiza tudo e mostra o app
-  setMsg('Preparando painel...');
-  try { renderAll(); } catch(e) { console.warn('renderAll erro:', e); }
-
-  clearTimeout(emergencia);
-  loading.style.display = 'none';
-  document.getElementById('appShell').style.display = 'flex';
-
-  if(GAS_URL) iniciarAutoSync();
-  else showSyncBadge('offline');
+    clearTimeout(emergencia);
+    loading.style.display = 'none';
+    document.getElementById('appShell').style.display = 'flex';
+    showSyncBadge('online');
 
   } catch(e) {
     console.error('mostrarApp erro crítico:', e);
     clearTimeout(emergencia);
-    if(loading) loading.style.display = 'none';
+    if (loading) loading.style.display = 'none';
     document.getElementById('appShell').style.display = 'flex';
+    showSyncBadge('error');
     try { renderAll(); } catch(_) {}
   }
 }
 
-// GAS_URL — carregada do Supabase ao iniciar (fallback: localStorage)
-let GAS_URL = localStorage.getItem('gasUrl') || '';
-let syncTimer = null, syncPending = false;
-let autoSyncInterval = null;
-let dadosSujos = false; // true quando há alterações não sincronizadas
-
-// Push desativado — apenas manual via botão nas Configurações
-function schedulePush() { /* push automático desativado */ }
-
-function iniciarAutoSync() {
-  if(!GAS_URL) return;
-  pararAutoSync();
-  pullFromSheets(); // pull ao fazer login (dados ainda limpos)
-  autoSyncInterval = setInterval(() => {
-    // Pull automático só roda se não há alterações locais pendentes
-    // Evita sobrescrever dados recém-salvos que ainda não foram ao Sheets
-    if(!dadosSujos) pullFromSheets(false, true); // silencioso
-  }, 2 * 60 * 1000);
-  console.log('🔄 AutoSync iniciado — pull a cada 2 min (somente se limpo)');
-}
-
-// Para o ciclo ao fazer logout
-function pararAutoSync() {
-  if(autoSyncInterval) {
-    clearInterval(autoSyncInterval);
-    autoSyncInterval = null;
-  }
-}
-async function pushToSheets() {
-  if(!GAS_URL||syncPending) return; syncPending=true; showSyncBadge('syncing');
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 15000);
+// ─── CARREGAR CONFIGS ──────────────────────────────────────────
+async function carregarConfigs() {
   try {
-    const r = await fetch(GAS_URL, { method:'POST', signal: controller.signal, body: JSON.stringify({
-      action:'push',
-      jovens, frequencias, recuperacoes, departamentos, lideres,
-      historicoMensal, metas, regras, liderSupremo,
-      usuario: document.getElementById('userName')?.textContent || 'Dashboard',
-    }) });
-    clearTimeout(timer);
-    const d = await r.json();
-    showSyncBadge(d.ok?'ok':'error');
-    if(!d.ok) console.error('Push erro GAS:', d.erro);
+    // config antiga (agenda_url, gas_url)
+    const { data: configAntiga } = await sb.from('config').select('chave, valor');
+    if (configAntiga) {
+      configAntiga.forEach(c => {
+        if (c.chave === 'agenda_url') window._agendaUrl = c.valor;
+        if (c.chave === 'gas_url' && c.valor) GAS_URL = c.valor; // apenas backup
+      });
+    }
+
+    // configs novas (ruja_configuracoes)
+    const { data: configs } = await sb.from('ruja_configuracoes').select('chave, valor_json');
+    if (configs) {
+      configs.forEach(c => {
+        if (c.chave === 'regras')        regras       = c.valor_json;
+        if (c.chave === 'metas')         metas        = c.valor_json;
+        if (c.chave === 'lider_supremo') liderSupremo = c.valor_json;
+      });
+    }
   } catch(e) {
-    clearTimeout(timer);
-    console.error('Push falhou:', e.message);
-    showSyncBadge('error');
-  } finally { syncPending=false; }
-}
-async function pullFromSheets(forcar=false, silencioso=false) {
-  if(!GAS_URL) return;
-
-  if(silencioso && dadosSujos) return;
-
-  if(!forcar && !silencioso && dadosSujos) {
-    const ok = confirm(
-      '⚠️ Você tem alterações não sincronizadas!\n\n' +
-      'Se puxar agora, suas alterações locais serão perdidas.\n\n' +
-      'OK = descartar e puxar da planilha\n' +
-      'Cancelar = voltar e clicar ☁️ Salvar primeiro.'
-    );
-    if(!ok) return;
+    console.warn('Erro ao carregar configs:', e.message);
   }
+}
 
-  if(!silencioso) showSyncBadge('syncing');
+// ─── CARREGAR TODOS OS DADOS ───────────────────────────────────
+async function carregarTodos() {
+  const [
+    rJovens, rFreq, rRec, rDeptos, rLideres, rHist
+  ] = await Promise.allSettled([
+    sb.from('ruja_jovens').select('*').order('nome'),
+    sb.from('ruja_frequencias').select('*').order('data', { ascending: false }),
+    sb.from('ruja_recuperacoes').select('*').order('data_inicio', { ascending: false }),
+    sb.from('ruja_departamentos').select('*').order('nome'),
+    sb.from('ruja_lideres').select('*').order('nome'),
+    sb.from('ruja_historico_mensal').select('*').order('mes'),
+  ]);
 
-  // AbortController com timeout de 10s
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 30000);
+  // Mapeia resultados (snake_case → camelCase para compatibilidade com UI existente)
+  if (rJovens.status === 'fulfilled' && rJovens.value.data)
+    jovens = rJovens.value.data.map(mapJovem);
 
+  if (rFreq.status === 'fulfilled' && rFreq.value.data)
+    frequencias = rFreq.value.data.map(mapFreq);
+
+  if (rRec.status === 'fulfilled' && rRec.value.data)
+    recuperacoes = rRec.value.data.map(mapRecup);
+
+  if (rDeptos.status === 'fulfilled' && rDeptos.value.data)
+    departamentos = rDeptos.value.data.map(mapDepto);
+
+  if (rLideres.status === 'fulfilled' && rLideres.value.data)
+    lideres = rLideres.value.data.map(mapLider);
+
+  if (rHist.status === 'fulfilled' && rHist.value.data)
+    historicoMensal = rHist.value.data.map(h => ({
+      mes: h.mes,
+      ativosDepto:    h.ativos_depto,
+      batizadosDepto: h.batizados_depto,
+      total:          h.total,
+    }));
+
+  console.log(`✅ Dados carregados: ${jovens.length} jovens, ${frequencias.length} freq, ${departamentos.length} deptos`);
+}
+
+// ─── MAPPERS snake → camelCase ─────────────────────────────────
+const mapJovem = r => ({
+  id: r.id, nome: r.nome, idade: r.idade, contato: r.contato,
+  instagram: r.instagram, endereco: r.endereco,
+  departamento: r.departamento, lider: r.lider, status: r.status,
+  entrada: r.entrada, batizado: r.batizado, dataBatismo: r.data_batismo,
+  dataNasc: r.data_nasc, obs: r.obs,
+});
+
+const mapFreq = r => ({
+  id: r.id, jovemId: r.jovem_id, data: r.data,
+  evento: r.evento, presenca: r.presenca, obs: r.obs,
+});
+
+const mapRecup = r => ({
+  id: r.id, jovemId: r.jovem_id, dataInicio: r.data_inicio,
+  liderResp: r.lider_resp, motivo: r.motivo, status: r.status, obs: r.obs,
+});
+
+const mapDepto = r => ({
+  id: r.id, nome: r.nome, icone: r.icone,
+  lider: r.lider, capacidade: r.capacidade, desc: r.descricao,
+});
+
+const mapLider = r => ({
+  id: r.id, nome: r.nome, contato: r.contato,
+  departamento: r.departamento, funcao: r.funcao, dataNasc: r.data_nasc,
+});
+
+// ─── SAVE DATA (Supabase como primário, localStorage como cache) ──
+async function saveData() {
+  // Limpa inválidos
+  jovens        = jovens.filter(j => j && j.id && j.nome && j.nome.trim());
+  lideres       = lideres.filter(l => l && l.id && l.nome && l.nome.trim());
+  departamentos = departamentos.filter(d => d && d.id && d.nome && d.nome.trim());
+  frequencias   = frequencias.filter(f => f && f.id && f.jovemId);
+  recuperacoes  = recuperacoes.filter(r => r && r.id && r.jovemId);
+
+  // Cache local para offline
+  localStorage.setItem('ruja_cache_jovens',        JSON.stringify(jovens));
+  localStorage.setItem('ruja_cache_departamentos',  JSON.stringify(departamentos));
+
+  // Snapshot mensal
+  await gravarSnapshotMensal();
+}
+
+// ─── UPSERT JOVEM ─────────────────────────────────────────────
+async function upsertJovem(j) {
+  const { error } = await sb.from('ruja_jovens').upsert({
+    id: j.id, nome: j.nome, idade: parseInt(j.idade)||0,
+    contato: j.contato||'', instagram: j.instagram||'',
+    endereco: j.endereco||'', departamento: j.departamento||'',
+    lider: j.lider||'', status: j.status||'Em Risco',
+    entrada: j.entrada||'', batizado: j.batizado||'nao',
+    data_batismo: j.dataBatismo||'', data_nasc: j.dataNasc||'', obs: j.obs||'',
+    atualizado_em: new Date().toISOString(),
+  });
+  if (error) throw error;
+}
+
+// ─── DELETE JOVEM ─────────────────────────────────────────────
+async function deleteJovem(id) {
+  const { error } = await sb.from('ruja_jovens').delete().eq('id', id);
+  if (error) throw error;
+  jovens = jovens.filter(j => j.id !== id);
+}
+
+// ─── UPSERT FREQUÊNCIA ────────────────────────────────────────
+async function upsertFrequencia(f) {
+  const { error } = await sb.from('ruja_frequencias').upsert({
+    id: f.id, jovem_id: f.jovemId, data: f.data,
+    evento: f.evento||'', presenca: f.presenca||'falta', obs: f.obs||'',
+  });
+  if (error) throw error;
+}
+
+// ─── DELETE FREQUÊNCIA ────────────────────────────────────────
+async function deleteFrequencia(id) {
+  const { error } = await sb.from('ruja_frequencias').delete().eq('id', id);
+  if (error) throw error;
+  frequencias = frequencias.filter(f => f.id !== id);
+}
+
+// ─── UPSERT RECUPERAÇÃO ───────────────────────────────────────
+async function upsertRecuperacao(r) {
+  const { error } = await sb.from('ruja_recuperacoes').upsert({
+    id: r.id, jovem_id: r.jovemId, data_inicio: r.dataInicio||'',
+    lider_resp: r.liderResp||'', motivo: r.motivo||'',
+    status: r.status||'ativo', obs: r.obs||'',
+    atualizado_em: new Date().toISOString(),
+  });
+  if (error) throw error;
+}
+
+// ─── DELETE RECUPERAÇÃO ───────────────────────────────────────
+async function deleteRecuperacao(id) {
+  const { error } = await sb.from('ruja_recuperacoes').delete().eq('id', id);
+  if (error) throw error;
+  recuperacoes = recuperacoes.filter(r => r.id !== id);
+}
+
+// ─── UPSERT DEPARTAMENTO ──────────────────────────────────────
+async function upsertDepartamento(d) {
+  const { error } = await sb.from('ruja_departamentos').upsert({
+    id: d.id, nome: d.nome, icone: d.icone||'🏛',
+    lider: d.lider||'', capacidade: parseInt(d.capacidade)||0,
+    descricao: d.desc||'', atualizado_em: new Date().toISOString(),
+  });
+  if (error) throw error;
+}
+
+// ─── DELETE DEPARTAMENTO ──────────────────────────────────────
+async function deleteDepartamento(id) {
+  const { error } = await sb.from('ruja_departamentos').delete().eq('id', id);
+  if (error) throw error;
+  departamentos = departamentos.filter(d => d.id !== id);
+}
+
+// ─── UPSERT LÍDER ─────────────────────────────────────────────
+async function upsertLider(l) {
+  const { error } = await sb.from('ruja_lideres').upsert({
+    id: l.id, nome: l.nome, contato: l.contato||'',
+    departamento: l.departamento||'', funcao: l.funcao||'',
+    data_nasc: l.dataNasc||'', atualizado_em: new Date().toISOString(),
+  });
+  if (error) throw error;
+}
+
+// ─── DELETE LÍDER ─────────────────────────────────────────────
+async function deleteLider(id) {
+  const { error } = await sb.from('ruja_lideres').delete().eq('id', id);
+  if (error) throw error;
+  lideres = lideres.filter(l => l.id !== id);
+}
+
+// ─── SALVAR CONFIGURAÇÃO ──────────────────────────────────────
+async function salvarConfig(chave, valor) {
+  const { error } = await sb.from('ruja_configuracoes').upsert({
+    chave, valor_json: valor, atualizado_em: new Date().toISOString(),
+  });
+  if (error) throw error;
+}
+
+// ─── SNAPSHOT MENSAL ──────────────────────────────────────────
+async function gravarSnapshotMensal() {
+  const mesAtual       = new Date().toISOString().slice(0, 7);
+  const ativosDepto    = jovens.filter(j => j.status === 'Ativo' && j.departamento).length;
+  const batizadosDepto = jovens.filter(j => j.status === 'Ativo' && j.departamento && j.batizado === 'sim').length;
+  const total          = jovens.length;
+
+  const snap = { mes: mesAtual, ativosDepto, batizadosDepto, total };
+
+  // Atualiza in-memory
+  const idx = historicoMensal.findIndex(h => h.mes === mesAtual);
+  if (idx !== -1) historicoMensal[idx] = snap; else historicoMensal.push(snap);
+  historicoMensal.sort((a, b) => a.mes.localeCompare(b.mes));
+
+  // Persiste no Supabase
   try {
-    const r = await fetch(GAS_URL, { signal: controller.signal });
-    clearTimeout(timer);
-    const d = await r.json();
-    if(d.jovens)          { jovens=d.jovens;                       localStorage.setItem('jovens',JSON.stringify(jovens)); }
-    if(d.frequencias)     { frequencias=d.frequencias;             localStorage.setItem('frequencias',JSON.stringify(frequencias)); }
-    if(d.recuperacoes)    { recuperacoes=d.recuperacoes;           localStorage.setItem('recuperacoes',JSON.stringify(recuperacoes)); }
-    if(d.departamentos)   { departamentos=d.departamentos;         localStorage.setItem('departamentos',JSON.stringify(departamentos)); }
-    if(d.lideres)         { lideres=d.lideres;                     localStorage.setItem('lideres',JSON.stringify(lideres)); }
-    if(d.historicoMensal) { historicoMensal=d.historicoMensal;     localStorage.setItem('historicoMensal',JSON.stringify(historicoMensal)); }
-    if(d.metas)           { metas=d.metas;                         localStorage.setItem('metas',JSON.stringify(metas)); }
-    if(d.regras)          { regras=d.regras;                       localStorage.setItem('regras',JSON.stringify(regras)); }
-    if(d.liderSupremo)    { liderSupremo=d.liderSupremo;           localStorage.setItem('liderSupremo',JSON.stringify(liderSupremo)); }
-    dadosSujos = false; limparAvisoPendente();
-    if(!silencioso) showSyncBadge('ok');
-    if(silencioso) renderAll();
-  } catch(e) {
-    clearTimeout(timer);
-    console.warn('Pull erro:', e.message);
-    if(!silencioso) showSyncBadge('offline');
-  }
-}
-function marcarDadosSujos() {
-  dadosSujos = true;
-  const btn = document.getElementById('btnSyncManual');
-  if(btn && !btn.disabled) {
-    btn.textContent = '🔴 Salvar agora';
-    btn.style.background = 'rgba(212,43,43,0.18)';
-    btn.style.color      = 'var(--red)';
-    btn.style.border     = '1px solid rgba(212,43,43,0.5)';
-  }
-  const top = document.getElementById('syncBadgeTop');
-  if(top) { top.textContent = '🔴 Não salvo'; top.style.color = 'var(--red)'; }
-  const cfg = document.getElementById('syncBadge');
-  if(cfg) { cfg.textContent = '🔴 Não salvo'; cfg.style.color = 'var(--red)'; }
+    await sb.from('ruja_historico_mensal').upsert({
+      mes: mesAtual, ativos_depto: ativosDepto,
+      batizados_depto: batizadosDepto, total,
+    }, { onConflict: 'mes' });
+  } catch(e) { console.warn('Erro ao gravar snapshot:', e.message); }
 }
 
-function limparAvisoPendente() {
-  dadosSujos = false;
-  const btn = document.getElementById('btnSyncManual');
-  if(btn) {
-    btn.style.background = 'rgba(59,130,246,0.12)';
-    btn.style.color      = '#3B82F6';
-    btn.style.border     = '1px solid rgba(59,130,246,0.3)';
-  }
-}
-
-function showSyncBadge(s) {
-  const m = {
-    ok:      { t:'☁️ Sincronizado',  c:'#22C55E' },
-    syncing: { t:'🔄 Salvando…',     c:'#F59E0B' },
-    error:   { t:'⚠️ Erro',          c:'#EF4444' },
-    offline: { t:'📴 Offline',       c:'#6B7280'  },
+// ─── SYNC BADGE (visual) ──────────────────────────────────────
+function showSyncBadge(estado) {
+  const el = document.getElementById('syncBadge');
+  if (!el) return;
+  const map = {
+    online:  { txt: '✅ Supabase Online',  cor: '#22C55E' },
+    syncing: { txt: '🔄 Sincronizando...',  cor: '#F59E0B' },
+    error:   { txt: '❌ Erro de conexão',   cor: '#D42B2B' },
+    offline: { txt: '📴 Offline',           cor: '#6B7280' },
   };
-  const x = m[s] || m.ok;
-  // Badge na topbar (sempre visível)
-  const top = document.getElementById('syncBadgeTop');
-  if(top) { top.textContent = x.t; top.style.color = x.c; }
-  // Badge na aba Config
-  const cfg = document.getElementById('syncBadge');
-  if(cfg) { cfg.textContent = x.t; cfg.style.color = x.c; }
-  // Botão de salvar — feedback visual
-  const btn = document.getElementById('btnSyncManual');
-  if(btn) {
-    if(s === 'syncing') {
-      btn.textContent = '🔄 Salvando…'; btn.disabled = true;
-      btn.style.opacity = '0.6';
-    } else if(s === 'ok') {
-      btn.textContent = '✅ Salvo!'; btn.disabled = false;
-      btn.style.opacity = '1';
-      setTimeout(() => { btn.textContent = '☁️ Salvar'; }, 2500);
-    } else {
-      btn.textContent = '☁️ Salvar'; btn.disabled = false;
-      btn.style.opacity = '1';
+  const s = map[estado] || map.offline;
+  el.textContent = s.txt;
+  el.style.color = s.cor;
+}
+
+// schedulePush mantido vazio (GAS agora é só backup opcional)
+function schedulePush()   { /* GAS = backup opcional */ }
+function marcarDadosSujos() { /* não necessário com Supabase em tempo real */ }
+function pararAutoSync()  { /* não necessário */ }
+
+// ─── MIGRAÇÃO DO GAS → SUPABASE (executa uma vez) ────────────
+async function migrarDoGAS() {
+  if (!GAS_URL) { showToast('GAS URL não configurada.'); return; }
+
+  showToast('Iniciando migração do Google Sheets...');
+  const btn = document.querySelector('[onclick="migrarDoGAS()"]');
+  if (btn) btn.disabled = true;
+
+  try {
+    const controller = new AbortController();
+    setTimeout(() => controller.abort(), 20000);
+    const r   = await fetch(GAS_URL, { signal: controller.signal });
+    const d   = await r.json();
+
+    const entidades = [
+      { chave: 'jovens',          tabela: 'ruja_jovens',          dados: d.jovens,          mapFn: j => ({
+          id: j.id, nome: j.nome, idade: parseInt(j.idade)||0,
+          contato: j.contato||'', instagram: j.instagram||'',
+          endereco: j.endereco||'', departamento: j.departamento||'',
+          lider: j.lider||'', status: j.status||'Em Risco',
+          entrada: j.entrada||'', batizado: j.batizado||'nao',
+          data_batismo: j.dataBatismo||'', data_nasc: j.dataNasc||'', obs: j.obs||'',
+        })
+      },
+      { chave: 'departamentos',   tabela: 'ruja_departamentos',   dados: d.departamentos,   mapFn: x => ({
+          id: x.id, nome: x.nome, icone: x.icone||'🏛',
+          lider: x.lider||'', capacidade: parseInt(x.capacidade)||0, descricao: x.desc||'',
+        })
+      },
+      { chave: 'lideres',         tabela: 'ruja_lideres',         dados: d.lideres,         mapFn: x => ({
+          id: x.id, nome: x.nome, contato: x.contato||'',
+          departamento: x.departamento||'', funcao: x.funcao||'', data_nasc: x.dataNasc||'',
+        })
+      },
+      { chave: 'frequencias',     tabela: 'ruja_frequencias',     dados: d.frequencias,     mapFn: x => ({
+          id: x.id, jovem_id: x.jovemId, data: x.data||'',
+          evento: x.evento||'', presenca: x.presenca||'falta', obs: x.obs||'',
+        })
+      },
+      { chave: 'recuperacoes',    tabela: 'ruja_recuperacoes',    dados: d.recuperacoes,    mapFn: x => ({
+          id: x.id, jovem_id: x.jovemId, data_inicio: x.dataInicio||'',
+          lider_resp: x.liderResp||'', motivo: x.motivo||'',
+          status: x.status||'ativo', obs: x.obs||'',
+        })
+      },
+    ];
+
+    for (const ent of entidades) {
+      if (!ent.dados || !ent.dados.length) {
+        await registrarLogMigracao(ent.tabela, 0, 'vazio', 'Sem dados no GAS');
+        continue;
+      }
+      try {
+        const payload = ent.dados.filter(x => x && x.id).map(ent.mapFn);
+        const { error } = await sb.from(ent.tabela).upsert(payload, { onConflict: 'id' });
+        if (error) throw error;
+        await registrarLogMigracao(ent.tabela, payload.length, 'sucesso', '');
+        showToast(`✅ ${ent.chave}: ${payload.length} registros migrados`);
+      } catch(e) {
+        await registrarLogMigracao(ent.tabela, 0, 'erro', e.message);
+        console.error(`Erro ao migrar ${ent.tabela}:`, e);
+      }
     }
+
+    // Recarrega dados do Supabase após migração
+    await carregarTodos();
+    renderAll();
+    showToast('🎉 Migração concluída! Dados agora no Supabase.');
+
+  } catch(e) {
+    showToast('Erro na migração: ' + e.message);
+    console.error(e);
+  } finally {
+    if (btn) btn.disabled = false;
   }
 }
 
-async function syncManual() {
-  if(syncPending) return;
-  syncPending = true;
-  showSyncBadge('syncing');
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 15000);
+async function registrarLogMigracao(tabela, qtd, status, obs) {
   try {
-    const r = await fetch(GAS_URL, { method:'POST', signal: controller.signal, body: JSON.stringify({
-      action:'push',
-      jovens, frequencias, recuperacoes, departamentos, lideres,
-      historicoMensal, metas, regras, liderSupremo,
-      usuario: document.getElementById('userName')?.textContent || 'Dashboard',
-    }) });
-    clearTimeout(timer);
-    const text = await r.text();
-    let d;
-    try { d = JSON.parse(text); } catch(e) {
-      console.error('Push resposta inválida (não é JSON):', text.slice(0,300));
-      showSyncBadge('error'); syncPending = false; return;
-    }
-    console.log('Push resposta GAS:', JSON.stringify(d));
-    if(d.ok) { dadosSujos = false; limparAvisoPendente(); showSyncBadge('ok'); }
-    else { console.error('Push erro GAS completo:', JSON.stringify(d)); showSyncBadge('error'); }
-  } catch(e) {
-    clearTimeout(timer);
-    console.error('Push falhou:', e.message);
-    showSyncBadge('error');
-  } finally { syncPending = false; }
+    await sb.from('migration_logs').insert({
+      tabela, registros_migrados: qtd, status, observacao: obs,
+    });
+  } catch(_) {}
 }
-function saveGasUrl() {
-  const u=document.getElementById('gasUrlInput').value.trim();
-  if(!u.startsWith('https://script.google.com')) return alert('URL inválida.');
-  localStorage.setItem('gasUrl',u); window.location.reload();
-}
-
-// ═══════════════════════════════════════════════
-// DATA STORE
-// ═══════════════════════════════════════════════
-// DATA STORE — carregado do localStorage ou vazio (dados reais vêm da planilha via pull)
-// ═══════════════════════════════════════════════
-let jovens        = JSON.parse(localStorage.getItem('jovens')||'null') || [];
-let frequencias   = JSON.parse(localStorage.getItem('frequencias')||'null') || [];
-let recuperacoes  = JSON.parse(localStorage.getItem('recuperacoes')||'null') || [];
-let departamentos = JSON.parse(localStorage.getItem('departamentos')||'null') || [];
-let lideres       = JSON.parse(localStorage.getItem('lideres')||'null') || [];
-let liderSupremo  = JSON.parse(localStorage.getItem('liderSupremo')||'null') || { nome:'', contato:'', instagram:'', foto:'', descricao:'', dataPosseLider:'', versiculoLider:'', visao:'', tempoNaRuja:'' };
-let regras        = JSON.parse(localStorage.getItem('regras')||'null') || { ativo:75, oscilando:40, risco:3 };
-let metas         = JSON.parse(localStorage.getItem('metas')||'null') || { ativosDepto:20, batizadosDepto:10 };
-let historicoMensal = JSON.parse(localStorage.getItem('historicoMensal')||'null') || [];
 
 // ═══════════════════════════════════════════════
 // HELPERS
@@ -1806,12 +1934,15 @@ function gravarSnapshotMensal() {
 // METAS & CRESCIMENTO
 // ═══════════════════════════════════════════════
 
-function saveMetas() {
+async function saveMetas() {
   metas.ativosDepto    = parseInt(document.getElementById('metaAtivosDepto').value)||20;
   metas.batizadosDepto = parseInt(document.getElementById('metaBatizadosDepto').value)||10;
-  saveData();
-  showToast('Metas salvas!');
-  if(currentPage==='metas') renderMetas();
+  try {
+    await salvarConfig('metas', metas);
+    await saveData();
+    showToast('Metas salvas!');
+    if(currentPage==='metas') renderMetas();
+  } catch(e) { showToast('Erro ao salvar metas: ' + e.message); }
 }
 
 let chartCrescimento = null;
@@ -2553,7 +2684,7 @@ function renderJovensTable(lista) {
           <div class="td-actions">
             <button class="action-btn" onclick="editJovem(${j.id})" title="Editar">✏️</button>
             <button class="action-btn" onclick="abrirRecupJovem(${j.id})" title="Recuperar">🚑</button>
-            <button class="action-btn del" onclick="deleteJovem(${j.id})" title="Excluir">🗑️</button>
+            <button class="action-btn del" onclick="deleteJovemUI(${j.id})" title="Excluir">🗑️</button>
           </div>
         </td>
       </tr>`).join('')
@@ -2932,7 +3063,7 @@ function saveRegras() {
 // ═══════════════════════════════════════════════
 // CRUD — JOVENS
 // ═══════════════════════════════════════════════
-function saveJovem() {
+async function saveJovem() {
   const val={
     nome:document.getElementById('jNome').value.trim(),
     idade:parseInt(document.getElementById('jIdade').value)||null,
@@ -2949,9 +3080,13 @@ function saveJovem() {
     obs:document.getElementById('jObs').value.trim(),
   };
   if(!val.nome||!val.contato) return alert('Preencha Nome e WhatsApp.');
-  if(editingId) { const i=jovens.findIndex(j=>j.id===editingId); if(i!==-1) jovens[i]={...jovens[i],...val}; }
-  else { val.id=Date.now(); jovens.push(val); }
-  saveData(); closeModal('modalJovem'); showToast('Jovem salvo!'); renderJovens();
+  if(editingId) { const i=jovens.findIndex(j=>j.id===editingId); if(i!==-1) jovens[i]={...jovens[i],...val}; val.id=editingId; }
+  else { val.id=String(Date.now()); jovens.push(val); }
+  try {
+    await upsertJovem(val);
+    await saveData();
+    closeModal('modalJovem'); showToast('Jovem salvo!'); renderJovens();
+  } catch(e) { showToast('Erro ao salvar: '+e.message); console.error(e); }
 }
 function editJovem(id) {
   const j=jovens.find(x=>x.id===id); if(!j) return;
@@ -2974,12 +3109,16 @@ function editJovem(id) {
     document.getElementById('modalJovemTitle').textContent='Editar Jovem';
   },50);
 }
-function deleteJovem(id) {
+async function deleteJovemUI(id) {
   if(!confirm('Excluir este jovem?')) return;
-  jovens=jovens.filter(j=>j.id!==id);
-  frequencias=frequencias.filter(f=>f.jovemId!==id);
-  recuperacoes=recuperacoes.filter(r=>r.jovemId!==id);
-  saveData(); renderJovens(); showToast('Jovem excluído');
+  try {
+    const { error } = await sb.from('ruja_jovens').delete().eq('id', String(id));
+    if(error) throw error;
+    jovens=jovens.filter(j=>j.id!==id&&j.id!==String(id));
+    frequencias=frequencias.filter(f=>f.jovemId!==id&&f.jovemId!==String(id));
+    recuperacoes=recuperacoes.filter(r=>r.jovemId!==id&&r.jovemId!==String(id));
+    await saveData(); renderJovens(); showToast('Jovem excluído');
+  } catch(e) { showToast('Erro ao excluir: '+e.message); }
 }
 
 // ═══════════════════════════════════════════════
@@ -3112,13 +3251,16 @@ function saveFreq() {
 // ═══════════════════════════════════════════════
 // CRUD — RECUPERAÇÃO
 // ═══════════════════════════════════════════════
-function saveRecup() {
-  const jovemId=parseInt(document.getElementById('rJovem').value);
+async function saveRecup() {
+  const jovemId=document.getElementById('rJovem').value;
   if(!jovemId) return alert('Selecione um jovem.');
-  const val={ jovemId, responsavel:document.getElementById('rResponsavel').value, etapa:document.getElementById('rEtapa').value, motivo:document.getElementById('rMotivo').value, acao:document.getElementById('rAcao').value, obs:document.getElementById('rObs').value, status:'Em andamento' };
-  if(editingRecupId) { const i=recuperacoes.findIndex(r=>r.id===editingRecupId); if(i!==-1) recuperacoes[i]={...recuperacoes[i],...val}; }
-  else { val.id=Date.now(); recuperacoes.push(val); }
-  saveData(); closeModal('modalRecup'); showToast('Plano salvo!'); renderRecuperacao();
+  const val={ jovemId:String(jovemId), responsavel:document.getElementById('rResponsavel').value, etapa:document.getElementById('rEtapa').value, motivo:document.getElementById('rMotivo').value, acao:document.getElementById('rAcao').value, obs:document.getElementById('rObs').value, status:'Em andamento' };
+  if(editingRecupId) { const i=recuperacoes.findIndex(r=>r.id===editingRecupId); if(i!==-1) recuperacoes[i]={...recuperacoes[i],...val}; val.id=editingRecupId; }
+  else { val.id=String(Date.now()); recuperacoes.push(val); }
+  try {
+    await sb.from('ruja_recuperacoes').upsert({ id:String(val.id), jovem_id:val.jovemId, motivo:val.motivo||'', lider_resp:val.responsavel||'', status:'ativo', obs:val.obs||'' });
+    await saveData(); closeModal('modalRecup'); showToast('Plano salvo!'); renderRecuperacao();
+  } catch(e) { showToast('Erro ao salvar: '+e.message); }
 }
 function editRecup(id) {
   const r=recuperacoes.find(x=>x.id===id); if(!r) return;
@@ -3134,10 +3276,13 @@ function editRecup(id) {
     document.getElementById('modalRecupTitle').textContent='Editar Plano';
   },50);
 }
-function deleteRecup(id) {
+async function deleteRecup(id) {
   if(!confirm('Excluir este plano?')) return;
-  recuperacoes=recuperacoes.filter(r=>r.id!==id);
-  saveData(); renderRecuperacao(); showToast('Plano excluído');
+  try {
+    await sb.from('ruja_recuperacoes').delete().eq('id', String(id));
+    recuperacoes=recuperacoes.filter(r=>r.id!==id&&r.id!==String(id));
+    await saveData(); renderRecuperacao(); showToast('Plano excluído');
+  } catch(e) { showToast('Erro ao excluir: '+e.message); }
 }
 
 // ═══════════════════════════════════════════════
@@ -3184,8 +3329,11 @@ function saveDepto() {
     showToast('Departamento salvo!');
   }
 
-  saveData(); closeModal('modalDepto'); renderDepartamentos();
-  if(currentPage==='jovens') renderJovens();
+  try {
+    await sb.from('ruja_departamentos').upsert({ id:String(val.id||editingDeptoId||Date.now()), nome:val.nome, icone:val.icone||'🏛', lider:val.lider||'', capacidade:parseInt(val.capacidade)||0, descricao:val.desc||'' });
+    await saveData(); closeModal('modalDepto'); renderDepartamentos();
+    if(currentPage==='jovens') renderJovens();
+  } catch(e) { showToast('Erro ao salvar departamento: '+e.message); }
 }
 function editDepto(id) {
   const d=departamentos.find(x=>x.id===id); if(!d) return;
@@ -3200,10 +3348,13 @@ function editDepto(id) {
     document.getElementById('modalDeptoTitle').textContent='Editar Departamento';
   },50);
 }
-function deleteDepto(id) {
+async function deleteDepto(id) {
   if(!confirm('Excluir este departamento?')) return;
-  departamentos=departamentos.filter(d=>d.id!==id);
-  saveData(); renderDepartamentos(); showToast('Departamento excluído');
+  try {
+    await sb.from('ruja_departamentos').delete().eq('id', String(id));
+    departamentos=departamentos.filter(d=>d.id!==id&&d.id!==String(id));
+    await saveData(); renderDepartamentos(); showToast('Departamento excluído');
+  } catch(e) { showToast('Erro ao excluir: '+e.message); }
 }
 
 
@@ -3386,10 +3537,13 @@ function saveLiderSupremo() {
     visao:          document.getElementById('lsVisao').value.trim(),
     descricao:      document.getElementById('lsDescricao').value.trim(),
   };
-  saveData();
-  document.getElementById('modalLiderSupremo').classList.remove('open');
-  showToast('Perfil do Líder Supremo salvo!');
-  renderLiderSupremo();
+  try {
+    await salvarConfig('lider_supremo', liderSupremo);
+    await saveData();
+    document.getElementById('modalLiderSupremo').classList.remove('open');
+    showToast('Perfil do Líder Supremo salvo!');
+    renderLiderSupremo();
+  } catch(e) { showToast('Erro ao salvar: '+e.message); }
 }
 
 function abrirWhatsappLider() {
@@ -3513,10 +3667,13 @@ function saveLider() {
     showToast('Líder salvo!');
   }
 
-  saveData(); closeModal('modalLider'); renderLideres();
-  if(currentPage==='jovens') renderJovens();
-  if(currentPage==='departamentos') renderDepartamentos();
-  if(currentPage==='aniversarios') renderAniversarios();
+  try {
+    await sb.from('ruja_lideres').upsert({ id:String(val.id||editingLiderId||Date.now()), nome:val.nome, contato:val.contato||'', departamento:val.departamento||'', funcao:val.funcao||'', data_nasc:val.dataNasc||'' });
+    await saveData(); closeModal('modalLider'); renderLideres();
+    if(currentPage==='jovens') renderJovens();
+    if(currentPage==='departamentos') renderDepartamentos();
+    if(currentPage==='aniversarios') renderAniversarios();
+  } catch(e) { showToast('Erro ao salvar líder: '+e.message); }
 }
 
 function editLider(id) {
@@ -3541,10 +3698,13 @@ function deleteLider(id) {
   // Remove o líder dos jovens antes de excluir
   if(l.departamento) sincronizarLiderNosJovens(l.departamento, '', l.nome);
 
-  lideres = lideres.filter(x=>x.id!==id);
-  saveData(); renderLideres(); showToast('Líder excluído');
-  if(currentPage==='jovens') renderJovens();
-  if(currentPage==='departamentos') renderDepartamentos();
+  try {
+    await sb.from('ruja_lideres').delete().eq('id', String(id));
+    lideres = lideres.filter(x=>x.id!==id&&x.id!==String(id));
+    await saveData(); renderLideres(); showToast('Líder excluído');
+    if(currentPage==='jovens') renderJovens();
+    if(currentPage==='departamentos') renderDepartamentos();
+  } catch(e) { showToast('Erro ao excluir líder: '+e.message); }
 }
 </script>
 </body>
