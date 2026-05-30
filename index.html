@@ -754,20 +754,20 @@ td.mono { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight
     </div>
     <div class="form-group">
       <label class="form-label" for="loginEmail">E-mail</label>
-      <input type="email" class="form-input" id="loginEmail" placeholder="seu@email.com" onkeydown="if(event.key==='Enter')doLogin()" autocomplete="email">
+      <input type="email" class="form-input" id="loginEmail" placeholder="seu@email.com" autocomplete="email">
     </div>
     <div class="form-group">
       <label class="form-label" for="loginPassword">Senha</label>
       <div style="position:relative">
-        <input type="password" class="form-input" id="loginPassword" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()" autocomplete="current-password" style="padding-right:44px">
+        <input type="password" class="form-input" id="loginPassword" placeholder="••••••••" autocomplete="current-password" style="padding-right:44px">
         <button onclick="toggleSenha()" type="button" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text3);font-size:16px" id="toggleSenhaBtn">👁️</button>
       </div>
     </div>
     <div id="loginError" style="display:none;background:rgba(212,43,43,0.12);border:1px solid rgba(212,43,43,0.3);border-radius:8px;padding:10px 14px;font-size:13px;color:var(--red);margin-bottom:4px"></div>
     <div id="loginSuccess" style="display:none;background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.3);border-radius:8px;padding:10px 14px;font-size:13px;color:var(--green);margin-bottom:4px"></div>
-    <button class="login-btn" onclick="doLogin()" id="loginBtn">🦁 Entrar no Painel</button>
+    <button class="login-btn" id="loginBtn" type="button">🦁 Entrar no Painel</button>
     <div style="text-align:center;margin-top:14px">
-      <button onclick="esqueceuSenha()" type="button" style="background:none;border:none;color:var(--text3);font-size:12px;cursor:pointer;text-decoration:underline">Esqueci minha senha</button>
+      <button id="forgotPasswordBtn" type="button" style="background:none;border:none;color:var(--text3);font-size:12px;cursor:pointer;text-decoration:underline">Esqueci minha senha</button>
     </div>
   </div>
 </div>
@@ -1654,7 +1654,42 @@ td.mono { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight
 // ─── SUPABASE CLIENT ───────────────────────────────────────────
 const _SB_URL = 'https://wjdnemfifgquuonwwaua.supabase.co';
 const _SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndqZG5lbWZpZmdxdXVvbnd3YXVhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3MDM4MzEsImV4cCI6MjA5NDI3OTgzMX0.Mx91ps-Rd1h0Van-xwWiRkSqVcXHVlssFNB-pZrlUHI';
-const sb = window.supabase.createClient(_SB_URL, _SB_KEY);
+const AUTH_DEBUG = true;
+
+function logAuthDebug(step, payload) {
+  if(!AUTH_DEBUG) return;
+  if(payload !== undefined) console.log('[RUJA Auth]', step, payload);
+  else console.log('[RUJA Auth]', step);
+}
+
+let sb = null;
+
+function inicializarSupabaseAuth() {
+  logAuthDebug('Inicializando Supabase', {
+    url: _SB_URL,
+    anonKeyCarregada: Boolean(_SB_KEY),
+    sdkCarregado: Boolean(window.supabase && window.supabase.createClient)
+  });
+
+  try {
+    if(!window.supabase || !window.supabase.createClient) {
+      throw new Error('SDK Supabase nao carregou. Verifique o script https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js');
+    }
+
+    sb = window.supabase.createClient(_SB_URL, _SB_KEY);
+    window.sb = sb;
+    logAuthDebug('Supabase inicializado', sb);
+    return sb;
+  } catch(error) {
+    console.error('[RUJA Auth] Falha ao inicializar Supabase:', error);
+    document.addEventListener('DOMContentLoaded', function() {
+      mostrarErroLogin('Nao foi possivel carregar a autenticacao. Recarregue a pagina e verifique a conexao.');
+    });
+    return null;
+  }
+}
+
+inicializarSupabaseAuth();
 
 // ─── DATA STORE (in-memory) ────────────────────────────────────
 let jovens          = [];
@@ -1673,11 +1708,18 @@ let GAS_URL = '';
 // ─── SESSÃO ────────────────────────────────────────────────────
 (async function() {
   try {
+    logAuthDebug('Verificando sessao persistida');
+    if(!sb) {
+      logAuthDebug('Sessao nao verificada: Supabase indisponivel');
+      return;
+    }
+
     // Show loading screen while checking session
     const loadingEl = document.getElementById('loadingScreen');
     if(loadingEl) { loadingEl.style.display='flex'; }
 
     const { data: { session }, error } = await sb.auth.getSession();
+    logAuthDebug('Retorno getSession', { hasSession: Boolean(session), error });
 
     if(loadingEl) { loadingEl.style.display='none'; }
 
@@ -1700,8 +1742,9 @@ let GAS_URL = '';
 })();
 
 // ─── AUTH STATE CHANGE — detecta login/logout em tempo real ────
+if(sb) {
 sb.auth.onAuthStateChange(function(event, session) {
-  console.log('[RUJA Auth] Evento:', event);
+  logAuthDebug('Evento onAuthStateChange', { event, hasSession: Boolean(session) });
   if(event === 'SIGNED_IN' && session && session.user) {
     // Só atualiza se o app não estiver já aberto
     if(document.getElementById('loginPage').style.display !== 'none') {
@@ -1722,6 +1765,9 @@ sb.auth.onAuthStateChange(function(event, session) {
     mostrarSucessoLogin('Defina sua nova senha abaixo.');
   }
 });
+} else {
+  console.warn('[RUJA Auth] Listener auth nao registrado porque o Supabase nao inicializou.');
+}
 
 // ─── HELPERS ──────────────────────────────────────────────────
 function toggleSenha() {
@@ -1764,7 +1810,7 @@ function ocultarErroLogin() {
 
 function _traduzirErroAuth(msg) {
   if(!msg) return 'Erro desconhecido. Tente novamente.';
-  if(msg.includes('Invalid login credentials'))   return 'E-mail ou senha incorretos.';
+  if(msg.includes('Invalid login credentials'))   return 'Email ou senha incorretos.';
   if(msg.includes('Email not confirmed'))          return 'E-mail ainda não confirmado. Verifique sua caixa de entrada.';
   if(msg.includes('Too many requests'))            return 'Muitas tentativas. Aguarde alguns minutos.';
   if(msg.includes('Network') || msg.includes('fetch') || msg.includes('Failed to fetch'))
@@ -2790,58 +2836,90 @@ function showToast(msg) {
 // LOGIN / LOGOUT / NAV
 // ═══════════════════════════════════════════════
 async function doLogin() {
-  const email    = (document.getElementById('loginEmail').value || '').trim();
-  const password = (document.getElementById('loginPassword').value || '');
-  const btn      = document.getElementById('loginBtn');
+  logAuthDebug('Clique no botao de login');
+
+  const emailEl    = document.getElementById('loginEmail');
+  const passwordEl = document.getElementById('loginPassword');
+  const btn        = document.getElementById('loginBtn');
+
+  logAuthDebug('Elementos do login', {
+    emailExiste: Boolean(emailEl),
+    senhaExiste: Boolean(passwordEl),
+    botaoExiste: Boolean(btn),
+    supabaseExiste: Boolean(sb)
+  });
+
+  if(!emailEl || !passwordEl || !btn) {
+    console.error('[RUJA Auth] Campos de login nao encontrados', { emailEl, passwordEl, btn });
+    mostrarErroLogin('Erro interno no formulario de login. Recarregue a pagina.');
+    return;
+  }
+
+  const email    = (emailEl.value || '').trim();
+  const password = (passwordEl.value || '');
 
   ocultarErroLogin();
+  logAuthDebug('Entrada na funcao doLogin');
+  logAuthDebug('Email lido', email);
 
   // Validate fields
   if(!email && !password) {
     mostrarErroLogin('Preencha e-mail e senha.');
-    document.getElementById('loginEmail').focus();
+    emailEl.focus();
     return;
   }
   if(!email) {
     mostrarErroLogin('Informe seu e-mail.');
-    document.getElementById('loginEmail').focus();
+    emailEl.focus();
     return;
   }
   if(!password) {
     mostrarErroLogin('Informe sua senha.');
-    document.getElementById('loginPassword').focus();
+    passwordEl.focus();
+    return;
+  }
+  if(!sb) {
+    mostrarErroLogin('Autenticacao indisponivel. Recarregue a pagina e tente novamente.');
+    console.error('[RUJA Auth] Supabase nao inicializado no momento do login.');
     return;
   }
 
   // Loading state
-  btn.textContent = '⏳ Entrando...';
+  btn.textContent = 'Entrando...';
   btn.disabled    = true;
 
   let data, error;
   try {
+    logAuthDebug('Chamando signInWithPassword', { email });
     const result = await sb.auth.signInWithPassword({ email, password });
     data  = result.data;
     error = result.error;
+    logAuthDebug('Retorno signInWithPassword', { data, error });
   } catch(e) {
     btn.textContent = '🦁 Entrar no Painel';
     btn.disabled    = false;
+    console.error('[RUJA Auth] Excecao no signInWithPassword:', e);
     mostrarErroLogin('Falha de conexão. Verifique sua internet.');
     return;
   }
 
-  // Restore button
-  btn.textContent = '🦁 Entrar no Painel';
-  btn.disabled    = false;
-
   if(error) {
+    btn.textContent = '🦁 Entrar no Painel';
+    btn.disabled    = false;
+    console.error('[RUJA Auth] Erro Auth:', error);
     mostrarErroLogin(_traduzirErroAuth(error.message));
     return;
   }
 
   if(!data || !data.user) {
+    btn.textContent = '🦁 Entrar no Painel';
+    btn.disabled    = false;
     mostrarErroLogin('Resposta inesperada do servidor. Tente novamente.');
     return;
   }
+
+  btn.textContent = 'Redirecionando...';
+  mostrarSucessoLogin('Redirecionando...');
 
   const user   = data.user;
   const meta   = user.user_metadata || {};
@@ -2861,35 +2939,60 @@ async function doLogout() {
 }
 
 async function esqueceuSenha() {
-  const email = (document.getElementById('loginEmail').value || '').trim();
+  logAuthDebug('Clique em recuperacao de senha');
+
+  const emailEl = document.getElementById('loginEmail');
+  const btn = document.getElementById('forgotPasswordBtn');
+
+  logAuthDebug('Elementos recuperacao de senha', {
+    emailExiste: Boolean(emailEl),
+    botaoExiste: Boolean(btn),
+    supabaseExiste: Boolean(sb)
+  });
+
+  if(!emailEl) {
+    mostrarErroLogin('Erro interno no formulario de recuperacao. Recarregue a pagina.');
+    return;
+  }
+
+  const email = (emailEl.value || '').trim();
 
   ocultarErroLogin();
+  logAuthDebug('Email recuperacao lido', email);
 
   if(!email) {
     mostrarErroLogin('Digite seu e-mail no campo acima antes de recuperar a senha.');
-    document.getElementById('loginEmail').focus();
+    emailEl.focus();
     return;
   }
 
   // Validate basic email format
   if(!email.includes('@') || !email.includes('.')) {
     mostrarErroLogin('Digite um e-mail válido.');
-    document.getElementById('loginEmail').focus();
+    emailEl.focus();
     return;
   }
 
-  const btn = document.getElementById('loginBtn');
+  if(!sb) {
+    mostrarErroLogin('Autenticacao indisponivel. Recarregue a pagina e tente novamente.');
+    console.error('[RUJA Auth] Supabase nao inicializado na recuperacao de senha.');
+    return;
+  }
+
   const origText = btn ? btn.textContent : '';
-  if(btn) { btn.textContent = '⏳ Enviando...'; btn.disabled = true; }
+  if(btn) { btn.textContent = 'Enviando...'; btn.disabled = true; }
 
   let error;
   try {
+    logAuthDebug('Chamando resetPasswordForEmail', { email, redirectTo: window.location.origin });
     const result = await sb.auth.resetPasswordForEmail(email, {
       redirectTo: window.location.origin,
     });
     error = result.error;
+    logAuthDebug('Retorno resetPasswordForEmail', { error });
   } catch(e) {
     if(btn) { btn.textContent = origText; btn.disabled = false; }
+    console.error('[RUJA Auth] Excecao no resetPasswordForEmail:', e);
     mostrarErroLogin('Falha de conexão. Verifique sua internet.');
     return;
   }
@@ -2897,11 +3000,57 @@ async function esqueceuSenha() {
   if(btn) { btn.textContent = origText; btn.disabled = false; }
 
   if(error) {
+    console.error('[RUJA Auth] Erro resetPasswordForEmail:', error);
     mostrarErroLogin(_traduzirErroAuth(error.message));
   } else {
-    mostrarSucessoLogin('✅ Link de recuperação enviado para ' + email + '. Verifique sua caixa de entrada (e o spam).');
+    mostrarSucessoLogin('Enviamos um link de recuperação para seu email.');
   }
 }
+
+document.addEventListener('DOMContentLoaded', function() {
+  const loginBtn = document.getElementById('loginBtn');
+  const forgotBtn = document.getElementById('forgotPasswordBtn');
+  const emailEl = document.getElementById('loginEmail');
+  const passwordEl = document.getElementById('loginPassword');
+
+  logAuthDebug('Registrando listeners de autenticacao', {
+    loginBtn: Boolean(loginBtn),
+    forgotBtn: Boolean(forgotBtn),
+    emailEl: Boolean(emailEl),
+    passwordEl: Boolean(passwordEl)
+  });
+
+  if(loginBtn) {
+    loginBtn.addEventListener('click', function(event) {
+      event.preventDefault();
+      logAuthDebug('Listener click loginBtn executado');
+      doLogin();
+    });
+  } else {
+    console.error('[RUJA Auth] Botao loginBtn nao encontrado no DOM.');
+  }
+
+  if(forgotBtn) {
+    forgotBtn.addEventListener('click', function(event) {
+      event.preventDefault();
+      logAuthDebug('Listener click forgotPasswordBtn executado');
+      esqueceuSenha();
+    });
+  } else {
+    console.error('[RUJA Auth] Botao forgotPasswordBtn nao encontrado no DOM.');
+  }
+
+  [emailEl, passwordEl].forEach(function(input) {
+    if(!input) return;
+    input.addEventListener('keydown', function(event) {
+      if(event.key === 'Enter') {
+        event.preventDefault();
+        logAuthDebug('Enter detectado em campo de login');
+        doLogin();
+      }
+    });
+  });
+});
 
 function navigate(page,el) {
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
@@ -3817,7 +3966,7 @@ async function deleteRecup(id) {
 // ═══════════════════════════════════════════════
 // CRUD — DEPARTAMENTOS
 // ═══════════════════════════════════════════════
-function saveDepto() {
+async function saveDepto() {
   const val = {
     nome:      document.getElementById('dNome').value.trim(),
     icone:     document.getElementById('dIcone').value.trim(),
@@ -4052,7 +4201,7 @@ function openModalLiderSupremo() {
   document.getElementById('lsDescricao').value = ls.descricao||'';
 }
 
-function saveLiderSupremo() {
+async function saveLiderSupremo() {
   const nome = document.getElementById('lsNome').value.trim();
   if(!nome) return alert('Preencha o nome do Líder Supremo.');
   liderSupremo = {
@@ -4155,7 +4304,7 @@ function recalcularTodosLideres() {
 // ═══════════════════════════════════════════════
 // CRUD — LÍDERES
 // ═══════════════════════════════════════════════
-function saveLider() {
+async function saveLider() {
   const val = {
     nome:        document.getElementById('lNome').value.trim(),
     contato:     document.getElementById('lContato').value.trim(),
@@ -4219,7 +4368,7 @@ function editLider(id) {
   },50);
 }
 
-function deleteLider(id) {
+async function deleteLider(id) {
   const l = lideres.find(x=>x.id===id);
   if(!l) return;
   if(!confirm(`Excluir o líder "${l.nome}"?\n\nOs jovens do departamento "${l.departamento||'—'}" terão o campo Líder limpo.`)) return;
@@ -4546,7 +4695,7 @@ function bnavGo(page, el) {
   if(el) el.classList.add('active');
   closeSidebar();
   // Re-use existing navigate() — finds sidebar nav-item and renders page
-  const sidebarItem = document.querySelector('.nav-item[onclick*="''+page+''"]');
+  const sidebarItem = document.querySelector('.nav-item[onclick*="' + page + '"]');
   navigate(page, sidebarItem);
   // Render mobile views after navigate
   if(isMobile()) setTimeout(()=>{ try{ renderMobileViews(page); }catch(e){} }, 80);
@@ -4630,7 +4779,7 @@ function renderJovensMobile() {
       var status = calcStatus(j.id);
       var freq = getFreqPct(j.id);
       var initials = (j.nome||'J').split(' ').map(function(w){return w[0]||'';}).join('').slice(0,2).toUpperCase();
-      var fotoHtml = j.foto_url ? '<img src="'+j.foto_url+'" onerror="this.style.display='none'" alt="">' : '';
+      var fotoHtml = j.foto_url ? '<img src="'+j.foto_url+'" onerror="this.style.display=&quot;none&quot;" alt="">' : '';
       var tel = (j.contato||'').replace(/\D/g,'');
       return '<div class="jovem-card-mobile" style="margin-bottom:10px">' +
         '<div class="jcm-avatar">' + fotoHtml + (fotoHtml?'':initials) + '</div>' +
@@ -4639,8 +4788,8 @@ function renderJovensMobile() {
           '<div class="jcm-meta">' + (j.departamento||'Sem depto') + ' &middot; ' + freq + '% pres.</div>' +
           '<div class="jcm-meta" style="margin-top:2px">' + getStatusBadge(status) + '</div>' +
           '<div class="jcm-actions">' +
-            '<button class="jcm-action-btn" onclick="openJovemActions('' + j.id + '')">⋯ Ações</button>' +
-            (tel ? '<button class="jcm-action-btn" onclick="window.open('https://wa.me/55' + tel + '')">📱 WA</button>' : '') +
+            '<button class="jcm-action-btn" onclick="openJovemActions(&quot;' + j.id + '&quot;)">⋯ Ações</button>' +
+            (tel ? '<button class="jcm-action-btn" onclick="window.open(&quot;https://wa.me/55' + tel + '&quot;)">📱 WA</button>' : '') +
           '</div>' +
         '</div>' +
       '</div>';
@@ -4673,8 +4822,8 @@ function renderRecupMobile() {
         '</div>' +
         '<div class="rcm-meta" style="margin-bottom:8px">Motivo: ' + (r.motivo||'—') + '</div>' +
         '<div class="rcm-actions">' +
-          (telClean ? '<button class="rcm-btn rcm-btn-wpp" onclick="window.open('https://wa.me/55' + telClean + '')">📱 WhatsApp</button>' : '') +
-          '<button class="rcm-btn rcm-btn-recover" onclick="marcarRecuperado('' + r.id + '')">✅ Recuperado</button>' +
+          (telClean ? '<button class="rcm-btn rcm-btn-wpp" onclick="window.open(&quot;https://wa.me/55' + telClean + '&quot;)">📱 WhatsApp</button>' : '') +
+          '<button class="rcm-btn rcm-btn-recover" onclick="marcarRecuperado(&quot;' + r.id + '&quot;)">✅ Recuperado</button>' +
         '</div>' +
       '</div>';
     }).join('');
@@ -4728,7 +4877,7 @@ function renderFreqMobile() {
       var presente = _freqPresentes[j.id] || false;
       var freq = getFreqPct(j.id);
       return '<div class="freq-card-mobile" style="margin-bottom:8px" id="fcm-'+j.id+'">' +
-        '<div class="fcm-check '+(presente?'present':'')+'" onclick="toggleFreqPresente(''+j.id+'')">' +
+        '<div class="fcm-check '+(presente?'present':'')+'" onclick="toggleFreqPresente(&quot;' + j.id + '&quot;)">' +
           (presente?'✅':'○') +
         '</div>' +
         '<div class="fcm-info">' +
