@@ -1139,6 +1139,13 @@ td.mono { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight
             <button class="btn btn-ghost btn-sm" onclick="pushToSheets()">⬆️ Enviar agora</button>
             <button class="btn btn-ghost btn-sm" onclick="recalcularTodosLideres();saveData();renderAll();showToast('Líderes recalculados!')" title="Relê a tabela de Líderes e atualiza o campo Líder de cada jovem pelo departamento" style="border-color:rgba(245,158,11,0.4);color:var(--yellow)">🔄 Recalcular líderes</button>
           </div>
+          <!-- Migração GAS → Supabase (C9-fix) -->
+          <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)" id="migracaoGasSection">
+            <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">🔄 Migração Google Sheets → Supabase</div>
+            <div style="font-size:12px;color:var(--text2);margin-bottom:10px">Importa dados do Google Sheets para o Supabase. Execute apenas uma vez após configurar a GAS URL.</div>
+            <button class="btn btn-warning btn-sm" onclick="migrarDoGAS()">▶ Iniciar Migração</button>
+            <div id="migrationStatus" style="margin-top:8px;font-size:12px;color:var(--text3)"></div>
+          </div>
         </div>
         <div class="two-col" style="margin-bottom:20px">
           <div class="card">
@@ -1575,22 +1582,22 @@ td.mono { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight
       👑 Perfil do Líder Supremo
       <button class="modal-close" onclick="closeModal('modalLiderSupremo')">✕</button>
     </div>
-        <!-- ─── FOTO ─── -->
-    <div class="foto-upload-area" id="fotoUploadArea">
-      <div class="foto-preview" id="fotoPreview">
-        <span id="fotoPreviewInicial">?</span>
+        <!-- ─── FOTO LÍDER SUPREMO (M3-fix: IDs com prefixo ls para evitar duplicação) ─── -->
+    <div class="foto-upload-area" id="lsFotoUploadArea">
+      <div class="foto-preview" id="lsFotoPreview">
+        <span id="lsFotoPreviewInicial">?</span>
       </div>
       <div class="foto-btns">
-        <div style="font-size:13px;font-weight:600;color:var(--text2);margin-bottom:2px">Foto do Jovem</div>
+        <div style="font-size:13px;font-weight:600;color:var(--text2);margin-bottom:2px">Foto do Líder Supremo</div>
         <div style="font-size:11px;color:var(--text3);margin-bottom:8px">JPG, PNG, WEBP · máx. 2MB</div>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           <label class="btn btn-ghost btn-sm" style="cursor:pointer;display:inline-flex;align-items:center;gap:6px">
             📷 Escolher foto
-            <input type="file" id="jFotoInput" accept="image/jpeg,image/png,image/webp,image/jpg" capture="environment" style="display:none" onchange="onFotoSelecionada(this)">
+            <input type="file" id="lsFotoInput" accept="image/jpeg,image/png,image/webp,image/jpg" capture="environment" style="display:none" onchange="onLsFotoSelecionada(this)">
           </label>
-          <button class="btn btn-ghost btn-sm" id="btnRemoverFoto" onclick="removerFotoJovem()" style="display:none;color:var(--red);border-color:rgba(212,43,43,0.3)">🗑️ Remover</button>
+          <button class="btn btn-ghost btn-sm" id="lsBtnRemoverFoto" onclick="removerFotoLiderSupremo()" style="display:none;color:var(--red);border-color:rgba(212,43,43,0.3)">🗑️ Remover</button>
         </div>
-        <div id="fotoStatus" style="font-size:11px;color:var(--text3);margin-top:4px"></div>
+        <div id="lsFotoStatus" style="font-size:11px;color:var(--text3);margin-top:4px"></div>
       </div>
     </div>
 
@@ -2059,11 +2066,7 @@ async function upsertLider(l) {
 }
 
 // ─── DELETE LÍDER ─────────────────────────────────────────────
-async function deleteLider(id) {
-  const { error } = await sb.from('ruja_lideres').delete().eq('id', id);
-  if (error) throw error;
-  lideres = lideres.filter(l => l.id !== id);
-}
+// deleteLider movida para a seção de Líderes abaixo (versão completa com sincronização)
 
 // ─── SALVAR CONFIGURAÇÃO ──────────────────────────────────────
 async function salvarConfig(chave, valor) {
@@ -2075,6 +2078,7 @@ async function salvarConfig(chave, valor) {
 
 // ─── SNAPSHOT MENSAL ──────────────────────────────────────────
 async function gravarSnapshotMensal() {
+  if (!jovens || jovens.length === 0) return; // M1-fix: não grava snapshot com dados vazios
   const mesAtual       = new Date().toISOString().slice(0, 7);
   const ativosDepto    = jovens.filter(j => j.status === 'Ativo' && j.departamento).length;
   const batizadosDepto = jovens.filter(j => j.status === 'Ativo' && j.departamento && j.batizado === 'sim').length;
@@ -2340,10 +2344,11 @@ function getStatusBadge(s) {
 }
 
 function getFreqPct(jovemId) {
-  const regs = frequencias.filter(f=>f.jovemId===jovemId);
-  if(!regs.length) return 0;
-  const pres = regs.filter(f=>f.presenca==='presente').length;
-  return Math.round((pres/regs.length)*100);
+  const sid  = String(jovemId); // ← normaliza tipo (evita === falso entre number e string)
+  const regs = frequencias.filter(f => String(f.jovemId) === sid);
+  if (!regs.length) return 0;
+  const pres = regs.filter(f => f.presenca === 'presente').length;
+  return Math.round((pres / regs.length) * 100);
 }
 
 function getFaltasSeguidas(jovemId) {
@@ -2359,6 +2364,66 @@ function calcStatus(jovemId) {
   if(pct >= regras.oscilando)return 'Oscilando';
   if(pct > 0)                return 'Ocioso';
   return 'Em Risco';
+}
+
+// ─── IMPORTAR CSV ──────────────────────────────────────────────
+async function importCSV(input) {
+  const tipo = document.getElementById('csvImportTipo')?.value || 'jovens';
+  const statusEl = document.getElementById('csvImportStatus');
+  const file = input.files?.[0];
+  if (!file) return;
+
+  const setStatus = (msg, ok=null) => {
+    if (!statusEl) return;
+    statusEl.textContent = msg;
+    statusEl.style.color = ok === true ? 'var(--green)' : ok === false ? 'var(--red)' : 'var(--text2)';
+  };
+
+  setStatus('📥 Lendo arquivo...');
+  try {
+    const text = await file.text();
+    const linhas = text.split('\n').filter(l => l.trim());
+    if (linhas.length < 2) { setStatus('❌ Arquivo vazio ou sem dados', false); return; }
+
+    const headers = linhas[0].split(',').map(h => h.trim().replace(/^"|"$/g,''));
+    const registros = linhas.slice(1).map(linha => {
+      const vals = linha.split(',').map(v => v.trim().replace(/^"|"$/g,''));
+      const obj = {};
+      headers.forEach((h, i) => { obj[h] = vals[i] || ''; });
+      return obj;
+    }).filter(r => r.nome || r.id);
+
+    if (!registros.length) { setStatus('❌ Nenhum registro válido encontrado', false); return; }
+
+    setStatus(`⏳ Importando ${registros.length} registros de ${tipo}...`);
+
+    const tabela = {
+      jovens:        'ruja_jovens',
+      lideres:       'ruja_lideres',
+      departamentos: 'ruja_departamentos',
+      frequencias:   'ruja_frequencias',
+    }[tipo];
+
+    if (!tabela) { setStatus('❌ Tipo inválido', false); return; }
+
+    // Garante ID em cada registro
+    const payload = registros.map(r => ({
+      ...r,
+      id: r.id || String(Date.now() + Math.random()),
+    }));
+
+    const { error } = await sb.from(tabela).upsert(payload, { onConflict: 'id' });
+    if (error) throw error;
+
+    await carregarTodos();
+    renderAll();
+    setStatus(`✅ ${registros.length} registros importados com sucesso!`, true);
+    showToast(`✅ ${registros.length} ${tipo} importados!`);
+    input.value = ''; // reset file input
+  } catch(e) {
+    setStatus('❌ Erro: ' + e.message, false);
+    console.error('[importCSV]', e);
+  }
 }
 
 function exportCSV(tipo) {
@@ -2436,6 +2501,7 @@ async function saveMetas() {
 }
 
 let chartCrescimento = null;
+let chartDepto       = null; // C3-fix: declarada para evitar TypeError
 
 function renderMetas() {
   const ativosDepto    = jovens.filter(j=>j.status==='Ativo'&&j.departamento).length;
@@ -3676,7 +3742,8 @@ function renderLideres() {
 // RENDER — CONFIG
 // ═══════════════════════════════════════════════
 function renderConfig() {
-  const u=localStorage.getItem('gasUrl')||'';
+  // M7-fix: lê GAS_URL do módulo de db (já carregado do Supabase) como fallback
+  const u = GAS_URL || localStorage.getItem('gasUrl') || '';
   const inp=document.getElementById('gasUrlInput'); if(inp) inp.value=u;
   if(u) showSyncBadge('offline');
   // regras — usa fallback se undefined
@@ -3724,12 +3791,19 @@ async function alterarSenha() {
   }
 }
 
-function saveRegras() {
-  regras.ativo=parseInt(document.getElementById('regAtivo').value)||75;
-  regras.oscilando=parseInt(document.getElementById('regOscilando').value)||40;
-  regras.risco=parseInt(document.getElementById('regRisco').value)||3;
-  localStorage.setItem('regras',JSON.stringify(regras));
-  showToast('Regras salvas!');
+async function saveRegras() {
+  regras.ativo    = parseInt(document.getElementById('regAtivo').value)    || 75;
+  regras.oscilando= parseInt(document.getElementById('regOscilando').value)|| 40;
+  regras.risco    = parseInt(document.getElementById('regRisco').value)    ||  3;
+  localStorage.setItem('regras', JSON.stringify(regras)); // cache local
+  try {
+    await salvarConfig('regras', regras); // ← persiste no Supabase
+    showToast('Regras salvas!');
+    console.log('[saveRegras] ✅ salvo no Supabase:', regras);
+  } catch(e) {
+    showToast('Erro ao salvar regras: ' + e.message);
+    console.error('[saveRegras]', e);
+  }
 }
 
 // ═══════════════════════════════════════════════
@@ -4555,7 +4629,37 @@ async function uploadFotoJovem(jovemId) {
 }
 
 // ─── Remove foto do jovem ─────────────────────────────────────
-async function removerFotoJovem() {
+async 
+// ─── FOTO LÍDER SUPREMO (M3-fix: handlers separados) ──────────
+let _lsFotoArquivo = null;
+
+function onLsFotoSelecionada(input) {
+  const file = input.files?.[0];
+  if (!file) return;
+  _lsFotoArquivo = file;
+  const preview = document.getElementById('lsFotoPreview');
+  const btn     = document.getElementById('lsBtnRemoverFoto');
+  const status  = document.getElementById('lsFotoStatus');
+  const reader  = new FileReader();
+  reader.onload = e => {
+    if (preview) preview.innerHTML = `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+    if (btn)     btn.style.display = 'inline-flex';
+    if (status)  status.textContent = file.name;
+  };
+  reader.readAsDataURL(file);
+}
+
+function removerFotoLiderSupremo() {
+  _lsFotoArquivo = null;
+  const preview = document.getElementById('lsFotoPreview');
+  const btn     = document.getElementById('lsBtnRemoverFoto');
+  const status  = document.getElementById('lsFotoStatus');
+  if (preview) preview.innerHTML = `<span id="lsFotoPreviewInicial">?</span>`;
+  if (btn)     btn.style.display = 'none';
+  if (status)  status.textContent = '';
+}
+
+function removerFotoJovem() {
   const preview = document.getElementById('fotoPreview');
   const btnRem  = document.getElementById('btnRemoverFoto');
   const status  = document.getElementById('fotoStatus');
@@ -4917,6 +5021,44 @@ function marcarTodosPresentes() {
   renderFreqMobile();
   showToast('Todos marcados como presentes!');
 }
+
+// ─── CÁLCULO AUTOMÁTICO DE STATUS (C11-fix) ───────────────────
+function calcularStatusAutomatico(jovemId) {
+  const sid     = String(jovemId);
+  const pct     = getFreqPct(sid);
+  const regs    = frequencias
+    .filter(f => String(f.jovemId) === sid)
+    .sort((a, b) => (b.data || '').localeCompare(a.data || ''));
+  const ultimas    = regs.slice(0, 5);
+  const faltasSeg  = (() => {
+    const fi = ultimas.findIndex(f => f.presenca === 'presente');
+    return fi === -1 ? ultimas.length : fi;
+  })();
+  if (regs.length === 0) return null;
+  const limAtivo     = regras.ativo     || 75;
+  const limOscilando = regras.oscilando || 40;
+  const limRisco     = regras.risco     ||  3;
+  if (faltasSeg >= limRisco)  return 'Em Risco';
+  if (pct >= limAtivo)        return 'Ativo';
+  if (pct >= limOscilando)    return 'Oscilando';
+  return 'Ocioso';
+}
+
+async function atualizarStatusJovem(jovemId) {
+  const novoStatus = calcularStatusAutomatico(jovemId);
+  if (!novoStatus) return;
+  const sid = String(jovemId);
+  const idx = jovens.findIndex(j => String(j.id) === sid);
+  if (idx === -1 || jovens[idx].status === novoStatus) return;
+  jovens[idx].status = novoStatus;
+  try {
+    await sb.from('ruja_jovens').update({ status: novoStatus, atualizado_em: new Date().toISOString() }).eq('id', sid);
+    console.log(`[autoStatus] ${jovens[idx].nome} → ${novoStatus}`);
+  } catch(e) {
+    console.warn('[autoStatus]', e.message);
+  }
+}
+
 async function salvarFreqLote() {
   const hoje = new Date().toISOString().split('T')[0];
   const presentes = Object.entries(_freqPresentes).filter(([,v])=>v).map(([id])=>id);
@@ -4929,6 +5071,10 @@ async function salvarFreqLote() {
     } catch(e){}
   }
   showToast(`✅ ${salvos} presenças salvas!`);
+  // C11-fix: recalcula status automaticamente para todos que tiveram presença salva
+  for (const jovemId of presentes) {
+    try { await atualizarStatusJovem(jovemId); } catch(e) {}
+  }
   _freqPresentes = {};
   renderAll();
 }
@@ -5112,7 +5258,12 @@ async function pullFromSheets(force) {
 }
 
 async function pushToSheets() {
-  return migrarTudoParaSupabase({ incluirGAS: false });
+  // C10-fix: Esta função REIMPORTA do GAS → Supabase (não exporta para Sheets).
+  // Para exportar dados do Supabase para Sheets, use exportCSV().
+  // O botão "Enviar agora" foi mantido por compatibilidade e redireciona para a reimportação.
+  showToast('⚠️ Use Exportar CSV para gerar arquivo. Esta função sincroniza do Sheets → Supabase.');
+  console.warn('[pushToSheets] Semanticamente incorreto. Use exportCSV() para exportar.');
+  // return migrarTudoParaSupabase({ incluirGAS: false }); // desabilitado
 }
 
 async function gravarSnapshotMensal() {
