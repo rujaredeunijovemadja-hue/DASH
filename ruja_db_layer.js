@@ -99,6 +99,13 @@ async function mostrarApp(nome, funcao) {
   }
 }
 
+// ─── HELPER: sanitiza inteiro, evita timestamp/NaN/negativo ──
+function _sanitizarInteiro(val, padrao, min, max) {
+  const n = parseInt(val);
+  if (isNaN(n) || n < min || n > max) return padrao;
+  return n;
+}
+
 // ─── CARREGAR CONFIGS ──────────────────────────────────────────
 async function carregarConfigs() {
   try {
@@ -115,11 +122,31 @@ async function carregarConfigs() {
     const { data: configs } = await sb.from('ruja_configuracoes').select('chave, valor_json');
     if (configs) {
       configs.forEach(c => {
-        if (c.chave === 'regras')        regras       = c.valor_json;
-        if (c.chave === 'metas')         metas        = c.valor_json;
-        if (c.chave === 'lider_supremo') liderSupremo = c.valor_json;
+        // valor_json vem como objeto JS (JSONB do Supabase) — nunca como string
+        const val = (typeof c.valor_json === 'string')
+          ? JSON.parse(c.valor_json)
+          : c.valor_json;
+
+        if (c.chave === 'regras') {
+          regras = {
+            ativo:     _sanitizarInteiro(val.ativo,     75, 0, 100),
+            oscilando: _sanitizarInteiro(val.oscilando, 40, 0, 100),
+            risco:     _sanitizarInteiro(val.risco,      3, 0, 100),
+          };
+        }
+
+        if (c.chave === 'metas') {
+          metas = {
+            ativosDepto:    _sanitizarInteiro(val.ativosDepto,    20, 1, 9999),
+            batizadosDepto: _sanitizarInteiro(val.batizadosDepto, 10, 0, 9999),
+          };
+        }
+
+        if (c.chave === 'lider_supremo') liderSupremo = val;
       });
     }
+
+    console.log('[configs] metas carregadas:', metas, '| regras:', regras);
   } catch(e) {
     console.warn('Erro ao carregar configs:', e.message);
   }
