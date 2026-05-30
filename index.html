@@ -764,6 +764,7 @@ td.mono { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight
       </div>
     </div>
     <div id="loginError" style="display:none;background:rgba(212,43,43,0.12);border:1px solid rgba(212,43,43,0.3);border-radius:8px;padding:10px 14px;font-size:13px;color:var(--red);margin-bottom:4px"></div>
+    <div id="loginSuccess" style="display:none;background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.3);border-radius:8px;padding:10px 14px;font-size:13px;color:var(--green);margin-bottom:4px"></div>
     <button class="login-btn" onclick="doLogin()" id="loginBtn">🦁 Entrar no Painel</button>
     <div style="text-align:center;margin-top:14px">
       <button onclick="esqueceuSenha()" type="button" style="background:none;border:none;color:var(--text3);font-size:12px;cursor:pointer;text-decoration:underline">Esqueci minha senha</button>
@@ -1671,36 +1672,114 @@ let GAS_URL = '';
 
 // ─── SESSÃO ────────────────────────────────────────────────────
 (async function() {
-  const { data: { session } } = await sb.auth.getSession();
-  if (session) {
-    const user = session.user;
-    const meta = user.user_metadata || {};
-    const nome = meta.nome || user.email.split('@')[0];
-    const funcao = meta.funcao || 'Líder';
-    mostrarApp(nome, funcao);
+  try {
+    // Show loading screen while checking session
+    const loadingEl = document.getElementById('loadingScreen');
+    if(loadingEl) { loadingEl.style.display='flex'; }
+
+    const { data: { session }, error } = await sb.auth.getSession();
+
+    if(loadingEl) { loadingEl.style.display='none'; }
+
+    if(error) {
+      console.warn('[RUJA] Erro ao verificar sessão:', error.message);
+      return;
+    }
+    if(session && session.user) {
+      const user   = session.user;
+      const meta   = user.user_metadata || {};
+      const nome   = meta.nome   || user.email.split('@')[0];
+      const funcao = meta.funcao || 'Líder';
+      mostrarApp(nome, funcao);
+    }
+  } catch(e) {
+    console.warn('[RUJA] Erro crítico na verificação de sessão:', e);
+    const loadingEl = document.getElementById('loadingScreen');
+    if(loadingEl) loadingEl.style.display='none';
   }
 })();
+
+// ─── AUTH STATE CHANGE — detecta login/logout em tempo real ────
+sb.auth.onAuthStateChange(function(event, session) {
+  console.log('[RUJA Auth] Evento:', event);
+  if(event === 'SIGNED_IN' && session && session.user) {
+    // Só atualiza se o app não estiver já aberto
+    if(document.getElementById('loginPage').style.display !== 'none') {
+      const user   = session.user;
+      const meta   = user.user_metadata || {};
+      const nome   = meta.nome   || user.email.split('@')[0];
+      const funcao = meta.funcao || 'Líder';
+      mostrarApp(nome, funcao);
+    }
+  }
+  if(event === 'SIGNED_OUT') {
+    document.getElementById('loginPage').style.display  = 'flex';
+    document.getElementById('appShell').style.display   = 'none';
+    ocultarErroLogin();
+  }
+  if(event === 'PASSWORD_RECOVERY') {
+    // User came back from reset email link
+    mostrarSucessoLogin('Defina sua nova senha abaixo.');
+  }
+});
 
 // ─── HELPERS ──────────────────────────────────────────────────
 function toggleSenha() {
   const inp = document.getElementById('loginPassword');
   const btn = document.getElementById('toggleSenhaBtn');
+  if(!inp || !btn) return;
   inp.type = inp.type === 'password' ? 'text' : 'password';
   btn.textContent = inp.type === 'password' ? '👁️' : '🙈';
 }
 
 function mostrarErroLogin(msg) {
   const el = document.getElementById('loginError');
-  if (el) { el.textContent = msg; el.style.display = 'block'; }
+  const ok = document.getElementById('loginSuccess');
+  if(ok) ok.style.display = 'none';
+  if(el) {
+    el.textContent = msg;
+    el.style.display = 'block';
+    el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+  console.warn('[RUJA Auth] Erro:', msg);
+}
+
+function mostrarSucessoLogin(msg) {
+  const el = document.getElementById('loginSuccess');
+  const er = document.getElementById('loginError');
+  if(er) er.style.display = 'none';
+  if(el) {
+    el.textContent = msg;
+    el.style.display = 'block';
+    el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
 }
 
 function ocultarErroLogin() {
   const el = document.getElementById('loginError');
-  if (el) el.style.display = 'none';
+  const ok = document.getElementById('loginSuccess');
+  if(el) el.style.display = 'none';
+  if(ok) ok.style.display = 'none';
+}
+
+function _traduzirErroAuth(msg) {
+  if(!msg) return 'Erro desconhecido. Tente novamente.';
+  if(msg.includes('Invalid login credentials'))   return 'E-mail ou senha incorretos.';
+  if(msg.includes('Email not confirmed'))          return 'E-mail ainda não confirmado. Verifique sua caixa de entrada.';
+  if(msg.includes('Too many requests'))            return 'Muitas tentativas. Aguarde alguns minutos.';
+  if(msg.includes('Network') || msg.includes('fetch') || msg.includes('Failed to fetch'))
+                                                   return 'Falha de conexão. Verifique sua internet.';
+  if(msg.includes('User not found'))               return 'Nenhuma conta encontrada com este e-mail.';
+  if(msg.includes('Email link is invalid'))        return 'Link de recuperação inválido ou expirado.';
+  return 'Erro: ' + msg;
 }
 
 // ─── MOSTRAR APP (carrega dados do Supabase) ───────────────────
 async function mostrarApp(nome, funcao) {
+  // Abre o app imediatamente, carrega dados em background
+  document.getElementById('loginPage').style.display   = 'none';
+  document.getElementById('appShell').style.display    = 'flex';
+
   // ── Abre o app IMEDIATAMENTE — não trava esperando Supabase ──
   document.getElementById('loginPage').style.display   = 'none';
   document.getElementById('appShell').style.display    = 'flex';
@@ -2711,68 +2790,119 @@ function showToast(msg) {
 // LOGIN / LOGOUT / NAV
 // ═══════════════════════════════════════════════
 async function doLogin() {
-  const email    = (document.getElementById('loginEmail').value||'').trim();
-  const password = document.getElementById('loginPassword').value||'';
+  const email    = (document.getElementById('loginEmail').value || '').trim();
+  const password = (document.getElementById('loginPassword').value || '');
   const btn      = document.getElementById('loginBtn');
 
   ocultarErroLogin();
 
-  if(!email || !password) {
+  // Validate fields
+  if(!email && !password) {
     mostrarErroLogin('Preencha e-mail e senha.');
+    document.getElementById('loginEmail').focus();
+    return;
+  }
+  if(!email) {
+    mostrarErroLogin('Informe seu e-mail.');
+    document.getElementById('loginEmail').focus();
+    return;
+  }
+  if(!password) {
+    mostrarErroLogin('Informe sua senha.');
+    document.getElementById('loginPassword').focus();
     return;
   }
 
-  btn.textContent = '🔄 Entrando…';
+  // Loading state
+  btn.textContent = '⏳ Entrando...';
   btn.disabled    = true;
 
-  const { data, error } = await sb.auth.signInWithPassword({ email, password });
+  let data, error;
+  try {
+    const result = await sb.auth.signInWithPassword({ email, password });
+    data  = result.data;
+    error = result.error;
+  } catch(e) {
+    btn.textContent = '🦁 Entrar no Painel';
+    btn.disabled    = false;
+    mostrarErroLogin('Falha de conexão. Verifique sua internet.');
+    return;
+  }
 
+  // Restore button
   btn.textContent = '🦁 Entrar no Painel';
   btn.disabled    = false;
 
   if(error) {
-    const msgs = {
-      'Invalid login credentials': 'E-mail ou senha incorretos.',
-      'Email not confirmed':       'Confirme seu e-mail antes de entrar.',
-      'Too many requests':         'Muitas tentativas. Aguarde alguns minutos.',
-    };
-    mostrarErroLogin(msgs[error.message] || 'Erro ao entrar: ' + error.message);
+    mostrarErroLogin(_traduzirErroAuth(error.message));
     return;
   }
 
-  const user  = data.user;
-  const meta  = user.user_metadata || {};
-  const nome  = meta.nome  || user.email.split('@')[0];
-  const funcao= meta.funcao|| 'Líder';
+  if(!data || !data.user) {
+    mostrarErroLogin('Resposta inesperada do servidor. Tente novamente.');
+    return;
+  }
+
+  const user   = data.user;
+  const meta   = user.user_metadata || {};
+  const nome   = meta.nome   || user.email.split('@')[0];
+  const funcao = meta.funcao || 'Líder';
   mostrarApp(nome, funcao);
 }
 
 async function doLogout() {
-  pararAutoSync();
-  await sb.auth.signOut();
+  try { pararAutoSync(); } catch(e) {}
+  try { await sb.auth.signOut(); } catch(e) {}
   document.getElementById('loginPage').style.display  = 'flex';
   document.getElementById('appShell').style.display   = 'none';
-  document.getElementById('loginEmail').value          = '';
-  document.getElementById('loginPassword').value       = '';
+  document.getElementById('loginEmail').value         = '';
+  document.getElementById('loginPassword').value      = '';
   ocultarErroLogin();
 }
 
 async function esqueceuSenha() {
-  const email = (document.getElementById('loginEmail').value||'').trim();
+  const email = (document.getElementById('loginEmail').value || '').trim();
+
+  ocultarErroLogin();
+
   if(!email) {
-    mostrarErroLogin('Digite seu e-mail no campo acima para recuperar a senha.');
+    mostrarErroLogin('Digite seu e-mail no campo acima antes de recuperar a senha.');
+    document.getElementById('loginEmail').focus();
     return;
   }
-  const { error } = await sb.auth.resetPasswordForEmail(email, {
-    redirectTo: window.location.origin,
-  });
+
+  // Validate basic email format
+  if(!email.includes('@') || !email.includes('.')) {
+    mostrarErroLogin('Digite um e-mail válido.');
+    document.getElementById('loginEmail').focus();
+    return;
+  }
+
+  const btn = document.getElementById('loginBtn');
+  const origText = btn ? btn.textContent : '';
+  if(btn) { btn.textContent = '⏳ Enviando...'; btn.disabled = true; }
+
+  let error;
+  try {
+    const result = await sb.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin,
+    });
+    error = result.error;
+  } catch(e) {
+    if(btn) { btn.textContent = origText; btn.disabled = false; }
+    mostrarErroLogin('Falha de conexão. Verifique sua internet.');
+    return;
+  }
+
+  if(btn) { btn.textContent = origText; btn.disabled = false; }
+
   if(error) {
-    mostrarErroLogin('Erro ao enviar e-mail: ' + error.message);
+    mostrarErroLogin(_traduzirErroAuth(error.message));
   } else {
-    ocultarErroLogin();
-    alert('✅ E-mail de recuperação enviado para ' + email + '!\nVerifique sua caixa de entrada.');
+    mostrarSucessoLogin('✅ Link de recuperação enviado para ' + email + '. Verifique sua caixa de entrada (e o spam).');
   }
 }
+
 function navigate(page,el) {
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   if(el) el.classList.add('active');
