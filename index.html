@@ -1859,6 +1859,8 @@ async function mostrarApp(nome, funcao) {
 
   // ── Renderiza com o que tiver ─────────────────────────────────
   try { renderAll(); } catch(e) { console.warn('renderAll erro:', e); }
+  // Re-popula a aba de config com os valores carregados do Supabase
+  try { if(currentPage==='config') renderConfig(); } catch(e) {}
 }
 
 // ─── CARREGAR CONFIGS ──────────────────────────────────────────
@@ -2654,13 +2656,10 @@ const CITACOES = {
 function getDiasParaAniversario(dataNasc) {
   if(!dataNasc) return 999;
   const hoje = new Date();
-  hoje.setHours(0,0,0,0);
-  const partes = dataNasc.split('-');
-  const aniv = new Date(hoje.getFullYear(), parseInt(partes[1])-1, parseInt(partes[2]));
-  aniv.setHours(0,0,0,0);
-  if(aniv.getTime() === hoje.getTime()) return 0;
-  if(aniv < hoje) aniv.setFullYear(hoje.getFullYear()+1);
-  return Math.ceil((aniv - hoje) / (1000*60*60*24));
+  const [y,m,d] = dataNasc.split('-');
+  let aniv = new Date(hoje.getFullYear(), parseInt(m)-1, parseInt(d));
+  if(aniv < hoje) aniv = new Date(hoje.getFullYear()+1, parseInt(m)-1, parseInt(d));
+  return Math.round((aniv - hoje) / (1000*60*60*24));
 }
 
 function getIdade(dataNasc) {
@@ -3680,11 +3679,14 @@ function renderConfig() {
   const u=localStorage.getItem('gasUrl')||'';
   const inp=document.getElementById('gasUrlInput'); if(inp) inp.value=u;
   if(u) showSyncBadge('offline');
-  document.getElementById('regAtivo').value=regras.ativo;
-  document.getElementById('regOscilando').value=regras.oscilando;
-  document.getElementById('regRisco').value=regras.risco;
-  try { document.getElementById('metaAtivosDepto').value=metas.ativosDepto; } catch(e){}
-  try { document.getElementById('metaBatizadosDepto').value=metas.batizadosDepto; } catch(e){}
+  // regras — usa fallback se undefined
+  try { document.getElementById('regAtivo').value    = (regras && regras.ativo    != null) ? regras.ativo    : 75; } catch(e){}
+  try { document.getElementById('regOscilando').value= (regras && regras.oscilando!= null) ? regras.oscilando: 40; } catch(e){}
+  try { document.getElementById('regRisco').value    = (regras && regras.risco    != null) ? regras.risco    :  3; } catch(e){}
+  // metas — usa fallback se undefined
+  try { document.getElementById('metaAtivosDepto').value    = (metas && metas.ativosDepto    > 0) ? metas.ativosDepto    : 20; } catch(e){}
+  try { document.getElementById('metaBatizadosDepto').value = (metas && metas.batizadosDepto >= 0) ? metas.batizadosDepto : 10; } catch(e){}
+  console.log('[renderConfig] regras:', regras, '| metas:', metas);
 }
 function toggleSenhaConfig(inputId, btnId) {
   const inp = document.getElementById(inputId);
