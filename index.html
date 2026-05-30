@@ -2654,10 +2654,13 @@ const CITACOES = {
 function getDiasParaAniversario(dataNasc) {
   if(!dataNasc) return 999;
   const hoje = new Date();
-  const [y,m,d] = dataNasc.split('-');
-  let aniv = new Date(hoje.getFullYear(), parseInt(m)-1, parseInt(d));
-  if(aniv < hoje) aniv = new Date(hoje.getFullYear()+1, parseInt(m)-1, parseInt(d));
-  return Math.round((aniv - hoje) / (1000*60*60*24));
+  hoje.setHours(0,0,0,0);
+  const partes = dataNasc.split('-');
+  const aniv = new Date(hoje.getFullYear(), parseInt(partes[1])-1, parseInt(partes[2]));
+  aniv.setHours(0,0,0,0);
+  if(aniv.getTime() === hoje.getTime()) return 0;
+  if(aniv < hoje) aniv.setFullYear(hoje.getFullYear()+1);
+  return Math.ceil((aniv - hoje) / (1000*60*60*24));
 }
 
 function getIdade(dataNasc) {
