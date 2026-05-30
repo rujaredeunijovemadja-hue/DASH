@@ -753,11 +753,11 @@ td.mono { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight
       <div class="login-sub">Rede UniJovem ADJA — Painel de Gestão</div>
     </div>
     <div class="form-group">
-      <label class="form-label">E-mail</label>
+      <label class="form-label" for="loginEmail">E-mail</label>
       <input type="email" class="form-input" id="loginEmail" placeholder="seu@email.com" onkeydown="if(event.key==='Enter')doLogin()" autocomplete="email">
     </div>
     <div class="form-group">
-      <label class="form-label">Senha</label>
+      <label class="form-label" for="loginPassword">Senha</label>
       <div style="position:relative">
         <input type="password" class="form-input" id="loginPassword" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()" autocomplete="current-password" style="padding-right:44px">
         <button onclick="toggleSenha()" type="button" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text3);font-size:16px" id="toggleSenhaBtn">👁️</button>
@@ -957,7 +957,7 @@ td.mono { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight
             <div style="font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">Mensagem Automática</div>
             <div class="card" style="padding:20px">
               <div class="form-group">
-                <label class="form-label">Citação Bíblica</label>
+                <label class="form-label" for="anivCitacao">Citação Bíblica</label>
                 <select class="form-select" id="anivCitacao" onchange="atualizarMsgPreview()">
                   <option value="Jeremias 29:11">"Porque eu sei os planos que tenho para vocês, diz o Senhor." — Jr 29:11</option>
                   <option value="Salmos 23:1">"O Senhor é o meu pastor; nada me faltará." — Sl 23:1</option>
@@ -970,7 +970,7 @@ td.mono { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight
                 </select>
               </div>
               <div class="form-group">
-                <label class="form-label">Prévia da Mensagem</label>
+                <label class="form-label" for="novaSenha">Prévia da Mensagem</label>
                 <div class="msg-preview" id="anivMsgPreview">Selecione um aniversariante para ver a mensagem</div>
               </div>
               <div style="display:flex;gap:8px;flex-wrap:wrap">
@@ -1221,14 +1221,14 @@ td.mono { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight
         <div class="card">
             <div class="card-header"><span class="card-title">🔐 Alterar Senha</span></div>
             <div class="form-group">
-              <label class="form-label">Nova Senha</label>
+              <label class="form-label" for="novaSenha">Nova Senha</label>
               <div style="position:relative">
                 <input type="password" class="form-input" id="novaSenha" placeholder="Mínimo 6 caracteres" style="padding-right:44px">
                 <button onclick="toggleSenhaConfig('novaSenha','btnNovaSenha')" type="button" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text3);font-size:16px" id="btnNovaSenha">👁️</button>
               </div>
             </div>
             <div class="form-group">
-              <label class="form-label">Confirmar Nova Senha</label>
+              <label class="form-label" for="confirmarSenha">Confirmar Nova Senha</label>
               <div style="position:relative">
                 <input type="password" class="form-input" id="confirmarSenha" placeholder="Repita a nova senha" style="padding-right:44px">
                 <button onclick="toggleSenhaConfig('confirmarSenha','btnConfirmarSenha')" type="button" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text3);font-size:16px" id="btnConfirmarSenha">👁️</button>
@@ -1287,38 +1287,38 @@ td.mono { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight
 
     <div class="form-row">
       <div class="form-group">
-        <label class="form-label">Nome Completo *</label>
+        <label class="form-label" for="jNome">Nome Completo *</label>
         <input type="text" class="form-input" id="jNome" placeholder="Nome do jovem">
       </div>
       <div class="form-group">
-        <label class="form-label">Idade</label>
+        <label class="form-label" for="jIdade">Idade</label>
         <input type="number" class="form-input" id="jIdade" placeholder="18" min="10" max="35" oninput="calcNascFromIdade()">
       </div>
     </div>
     <div class="form-row">
       <div class="form-group">
-        <label class="form-label">WhatsApp *</label>
+        <label class="form-label" for="jContato">WhatsApp *</label>
         <input type="text" class="form-input" id="jContato" placeholder="(21) 99999-9999">
       </div>
       <div class="form-group">
-        <label class="form-label">Instagram</label>
+        <label class="form-label" for="jInstagram">Instagram</label>
         <input type="text" class="form-input" id="jInstagram" placeholder="@usuario">
       </div>
     </div>
     <div class="form-group">
-      <label class="form-label">Endereço Completo</label>
+      <label class="form-label" for="jEndereco">Endereço Completo</label>
       <input type="text" class="form-input" id="jEndereco" placeholder="Rua, número, bairro, cidade">
     </div>
     <div class="form-row">
       <div class="form-group">
-        <label class="form-label">Departamento(s)</label>
+        <label class="form-label" for="jLider">Departamento(s)</label>
         <div id="jDepartamentoWrap" style="display:flex;flex-wrap:wrap;gap:6px;padding:10px;background:var(--black3);border:1px solid var(--border);border-radius:10px;min-height:42px">
           <span style="font-size:12px;color:var(--text3);align-self:center">Carregando departamentos...</span>
         </div>
         <input type="hidden" id="jDepartamento">
       </div>
       <div class="form-group">
-        <label class="form-label">Líder Responsável</label>
+        <label class="form-label" for="jLider">Líder Responsável</label>
         <select class="form-select" id="jLider">
           <option value="">Sem líder</option>
         </select>
@@ -1326,7 +1326,7 @@ td.mono { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight
     </div>
     <div class="form-row">
       <div class="form-group">
-        <label class="form-label">Status Inicial</label>
+        <label class="form-label" for="jStatus">Status Inicial</label>
         <select class="form-select" id="jStatus">
           <option>Ativo</option>
           <option>Oscilando</option>
@@ -1335,26 +1335,26 @@ td.mono { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight
         </select>
       </div>
       <div class="form-group">
-        <label class="form-label">Data de Entrada</label>
+        <label class="form-label" for="jEntrada">Data de Entrada</label>
         <input type="text" class="form-input date-mask" id="jEntrada" placeholder="DD/MM/AAAA" maxlength="10" autocomplete="off" oninput="maskDate(this)">
       </div>
     </div>
     <div class="form-row">
       <div class="form-group">
-        <label class="form-label">Batizado(a)?</label>
+        <label class="form-label" for="jBatizado">Batizado(a)?</label>
         <select class="form-select" id="jBatizado">
           <option value="nao">Não</option>
           <option value="sim">✅ Sim</option>
         </select>
       </div>
       <div class="form-group">
-        <label class="form-label">Data do Batismo</label>
+        <label class="form-label" for="jDataBatismo">Data do Batismo</label>
         <input type="text" class="form-input date-mask" id="jDataBatismo" placeholder="DD/MM/AAAA" maxlength="10" autocomplete="off" oninput="maskDate(this)">
       </div>
     </div>
     <div class="form-row">
       <div class="form-group">
-        <label class="form-label">🎂 Data de Nascimento</label>
+        <label class="form-label" for="jDataNasc">🎂 Data de Nascimento</label>
         <input type="text" class="form-input date-mask" id="jDataNasc" placeholder="DD/MM/AAAA" maxlength="10" autocomplete="off" oninput="maskDate(this);calcIdadeFromNasc()">
       </div>
       <div class="form-group" style="display:flex;align-items:flex-end">
@@ -1362,7 +1362,7 @@ td.mono { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight
       </div>
     </div>
     <div class="form-group">
-      <label class="form-label">Observação (Situação + Motivo + Ação)</label>
+      <label class="form-label" for="jObs">Observação (Situação + Motivo + Ação)</label>
       <textarea class="form-textarea" id="jObs" placeholder="Ex: Desmotivado + problemas familiares + líder vai acompanhar"></textarea>
     </div>
     <div class="form-footer">
@@ -1382,7 +1382,7 @@ td.mono { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight
 
     <!-- Contexto -->
     <div class="form-group">
-      <label class="form-label">Contexto / Grupo *</label>
+      <label class="form-label" for="fEventoTipo">Contexto / Grupo *</label>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button class="filter-tab active" id="fCtxGeral"   onclick="setFreqContexto('Geral',this)">🌐 Geral</button>
         <button class="filter-tab"        id="fCtxTeens"   onclick="setFreqContexto('Teens',this)">🧒 Teens</button>
@@ -1395,15 +1395,15 @@ td.mono { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight
     <!-- Evento -->
     <div class="form-row">
       <div class="form-group">
-        <label class="form-label">Tipo de Evento *</label>
+        <label class="form-label" for="fEventoTipo">Tipo de Evento *</label>
         <select class="form-select" id="fEventoTipo" onchange="onFreqEventoChange(this)"></select>
       </div>
       <div class="form-group" id="fEventoOutroGrupo" style="display:none">
-        <label class="form-label">Nome do Evento *</label>
+        <label class="form-label" for="fEventoOutro">Nome do Evento *</label>
         <input type="text" class="form-input" id="fEventoOutro" placeholder="Ex: Retiro, Acampamento...">
       </div>
       <div class="form-group">
-        <label class="form-label">Data *</label>
+        <label class="form-label" for="fData">Data *</label>
         <input type="text" class="form-input date-mask" id="fData" placeholder="DD/MM/AAAA" maxlength="10" autocomplete="off" oninput="maskDate(this)">
       </div>
     </div>
@@ -1421,7 +1421,7 @@ td.mono { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight
     </div>
 
     <div class="form-group">
-      <label class="form-label">Observação geral</label>
+      <label class="form-label" for="fObs">Observação geral</label>
       <input type="text" class="form-input" id="fObs" placeholder="Opcional">
     </div>
 
@@ -1441,17 +1441,17 @@ td.mono { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight
     </div>
     <div class="form-row">
       <div class="form-group">
-        <label class="form-label">Jovem *</label>
+        <label class="form-label" for="rJovem">Jovem *</label>
         <select class="form-select" id="rJovem"></select>
       </div>
       <div class="form-group">
-        <label class="form-label">Responsável *</label>
+        <label class="form-label" for="rResponsavel">Responsável *</label>
         <select class="form-select" id="rResponsavel"></select>
       </div>
     </div>
     <div class="form-row">
       <div class="form-group">
-        <label class="form-label">Etapa Atual</label>
+        <label class="form-label" for="rEtapa">Etapa Atual</label>
         <select class="form-select" id="rEtapa">
           <option>1 — Contato via WhatsApp</option>
           <option>2 — Visita / Chamada pessoal</option>
@@ -1461,7 +1461,7 @@ td.mono { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight
         </select>
       </div>
       <div class="form-group">
-        <label class="form-label">Motivo do Afastamento</label>
+        <label class="form-label" for="rMotivo">Motivo do Afastamento</label>
         <select class="form-select" id="rMotivo">
           <option>Pessoal / Família</option>
           <option>Trabalho / Estudo</option>
@@ -1474,11 +1474,11 @@ td.mono { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight
       </div>
     </div>
     <div class="form-group">
-      <label class="form-label">Próxima Ação</label>
+      <label class="form-label" for="rAcao">Próxima Ação</label>
       <input type="text" class="form-input" id="rAcao" placeholder="Ex: Ligar quinta-feira às 19h">
     </div>
     <div class="form-group">
-      <label class="form-label">Observação</label>
+      <label class="form-label" for="rObs">Observação</label>
       <textarea class="form-textarea" id="rObs" placeholder="Detalhes da situação..."></textarea>
     </div>
     <div class="form-footer">
@@ -1497,26 +1497,26 @@ td.mono { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight
     </div>
     <div class="form-row">
       <div class="form-group">
-        <label class="form-label">Nome *</label>
+        <label class="form-label" for="dNome">Nome *</label>
         <input type="text" class="form-input" id="dNome" placeholder="Ex: Mídia, Música, Louvor...">
       </div>
       <div class="form-group">
-        <label class="form-label">Ícone</label>
+        <label class="form-label" for="dIcone">Ícone</label>
         <input type="text" class="form-input" id="dIcone" placeholder="Ex: 🎵 🎬 🙏">
       </div>
     </div>
     <div class="form-row">
       <div class="form-group">
-        <label class="form-label">Líder Responsável</label>
+        <label class="form-label" for="dLider">Líder Responsável</label>
         <select class="form-select" id="dLider"></select>
       </div>
       <div class="form-group">
-        <label class="form-label">Capacidade Máxima</label>
+        <label class="form-label" for="dCapacidade">Capacidade Máxima</label>
         <input type="number" class="form-input" id="dCapacidade" placeholder="20" min="1">
       </div>
     </div>
     <div class="form-group">
-      <label class="form-label">Descrição</label>
+      <label class="form-label" for="dDesc">Descrição</label>
       <input type="text" class="form-input" id="dDesc" placeholder="Objetivo do departamento...">
     </div>
     <div class="form-footer">
@@ -1535,28 +1535,28 @@ td.mono { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight
     </div>
     <div class="form-row">
       <div class="form-group">
-        <label class="form-label">Nome *</label>
+        <label class="form-label" for="lNome">Nome *</label>
         <input type="text" class="form-input" id="lNome" placeholder="Nome do líder">
       </div>
       <div class="form-group">
-        <label class="form-label">WhatsApp *</label>
+        <label class="form-label" for="lContato">WhatsApp *</label>
         <input type="text" class="form-input" id="lContato" placeholder="(21) 99999-9999">
       </div>
     </div>
     <div class="form-row">
       <div class="form-group">
-        <label class="form-label">Departamento</label>
+        <label class="form-label" for="lDepartamento">Departamento</label>
         <select class="form-select" id="lDepartamento">
           <option value="">Geral</option>
         </select>
       </div>
       <div class="form-group">
-        <label class="form-label">Função</label>
+        <label class="form-label" for="lFuncao">Função</label>
         <input type="text" class="form-input" id="lFuncao" placeholder="Ex: Pastor, Líder de Mídia...">
       </div>
     </div>
     <div class="form-group">
-      <label class="form-label">🎂 Data de Nascimento</label>
+      <label class="form-label" for="lDataNasc">🎂 Data de Nascimento</label>
       <input type="text" class="form-input date-mask" id="lDataNasc" placeholder="DD/MM/AAAA" maxlength="10" autocomplete="off" oninput="maskDate(this)">
       <div style="font-size:11px;color:var(--text3);margin-top:4px">Para alertas de aniversário na aba correspondente</div>
     </div>
@@ -1596,42 +1596,42 @@ td.mono { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight
 
     <div class="form-row">
       <div class="form-group">
-        <label class="form-label">Nome Completo *</label>
+        <label class="form-label" for="lsNome">Nome Completo *</label>
         <input type="text" class="form-input" id="lsNome" placeholder="Nome do Líder Supremo">
       </div>
       <div class="form-group">
-        <label class="form-label">WhatsApp</label>
+        <label class="form-label" for="lsContato">WhatsApp</label>
         <input type="text" class="form-input" id="lsContato" placeholder="(21) 99999-9999">
       </div>
     </div>
     <div class="form-row">
       <div class="form-group">
-        <label class="form-label">Instagram</label>
+        <label class="form-label" for="lsInstagram">Instagram</label>
         <input type="text" class="form-input" id="lsInstagram" placeholder="@usuario">
       </div>
       <div class="form-group">
-        <label class="form-label">Data de Posse / Início</label>
+        <label class="form-label" for="lsDataPosse">Data de Posse / Início</label>
         <input type="text" class="form-input date-mask" id="lsDataPosse" placeholder="DD/MM/AAAA" maxlength="10" autocomplete="off" oninput="maskDate(this)">
       </div>
     </div>
     <div class="form-group">
-      <label class="form-label">Data de Nascimento</label>
+      <label class="form-label" for="lsDataNasc">Data de Nascimento</label>
       <input type="text" class="form-input date-mask" id="lsDataNasc" placeholder="DD/MM/AAAA" maxlength="10" autocomplete="off" oninput="maskDate(this)">
     </div>
     <div class="form-group">
-      <label class="form-label">Tempo na RUJA (ex: 3 anos, desde 2021)</label>
+      <label class="form-label" for="lsTempoRuja">Tempo na RUJA (ex: 3 anos, desde 2021)</label>
       <input type="text" class="form-input" id="lsTempoRuja" placeholder="Ex: Desde 2020 · 5 anos">
     </div>
     <div class="form-group">
-      <label class="form-label">Versículo do Líder</label>
+      <label class="form-label" for="lsVersiculo">Versículo do Líder</label>
       <input type="text" class="form-input" id="lsVersiculo" placeholder="Ex: Josué 1:9 — Seja forte e corajoso...">
     </div>
     <div class="form-group">
-      <label class="form-label">Visão / Propósito do Ministério</label>
+      <label class="form-label" for="lsVisao">Visão / Propósito do Ministério</label>
       <textarea class="form-textarea" id="lsVisao" placeholder="Qual é a visão que você tem para a RUJA?"></textarea>
     </div>
     <div class="form-group">
-      <label class="form-label">Descrição / Biografia</label>
+      <label class="form-label" for="lsDescricao">Descrição / Biografia</label>
       <textarea class="form-textarea" id="lsDescricao" placeholder="Um pouco sobre o líder, sua história, chamado..."></textarea>
     </div>
     <div class="form-footer">
