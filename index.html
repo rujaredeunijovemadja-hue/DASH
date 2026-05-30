@@ -430,9 +430,295 @@ td.mono { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight
   .two-col,.three-col,.kpi-grid,.kpi-grid-3,.funil-grid { grid-template-columns:1fr; }
   .kpi-grid { grid-template-columns:1fr 1fr; }
 }
+
+/* ═══ MOBILE FIRST — BOTTOM NAV ═══ */
+.bottom-nav {
+  display:none;
+  position:fixed; bottom:0; left:0; right:0; z-index:200;
+  background:var(--black2); border-top:1px solid var(--border);
+  padding: 0 0 env(safe-area-inset-bottom,0);
+  box-shadow:0 -4px 20px rgba(0,0,0,0.4);
+}
+.bottom-nav-inner {
+  display:flex; align-items:stretch; height:60px;
+}
+.bnav-item {
+  flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:3px; cursor:pointer; color:var(--text3); font-size:10px; font-weight:600;
+  letter-spacing:0.3px; transition:color 0.15s; padding:6px 2px; border:none; background:none;
+  -webkit-tap-highlight-color:transparent; position:relative; min-height:44px;
+}
+.bnav-item .bnav-icon { font-size:20px; line-height:1; }
+.bnav-item.active { color:var(--red); }
+.bnav-item.active::before {
+  content:''; position:absolute; top:0; left:50%; transform:translateX(-50%);
+  width:32px; height:2px; background:var(--red); border-radius:0 0 2px 2px;
+}
+.bnav-more { position:relative; }
+
+/* ─── MOBILE OVERLAY SIDEBAR ─── */
+.sidebar-overlay {
+  display:none; position:fixed; inset:0; z-index:150;
+  background:rgba(0,0,0,0.6); backdrop-filter:blur(2px);
+}
+.sidebar-overlay.open { display:block; }
+
+/* ─── MOBILE HAMBURGER ─── */
+.mobile-menu-btn {
+  display:none; background:none; border:none; cursor:pointer;
+  color:var(--text); font-size:22px; padding:8px; margin-right:4px;
+  -webkit-tap-highlight-color:transparent;
+}
+
+/* ─── FAB — Floating Action Button ─── */
+.fab {
+  display:none;
+  position:fixed; bottom:80px; right:20px; z-index:180;
+  width:56px; height:56px; border-radius:50%;
+  background:var(--red); color:#fff; font-size:26px;
+  border:none; cursor:pointer; box-shadow:0 4px 20px rgba(212,43,43,0.5);
+  align-items:center; justify-content:center;
+  transition:transform 0.15s, box-shadow 0.15s;
+  -webkit-tap-highlight-color:transparent;
+}
+.fab:active { transform:scale(0.92); box-shadow:0 2px 10px rgba(212,43,43,0.4); }
+
+/* ─── JOVENS CARD MOBILE ─── */
+.jovem-card-mobile {
+  background:var(--card); border:1px solid var(--border); border-radius:14px;
+  padding:14px 16px; display:flex; gap:12px; align-items:flex-start;
+  transition:border-color 0.15s; position:relative; overflow:hidden;
+}
+.jovem-card-mobile::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:1px;
+  background:linear-gradient(90deg,transparent,rgba(212,43,43,0.25),transparent);
+}
+.jovem-card-mobile .jcm-avatar {
+  width:48px; height:48px; border-radius:50%; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center;
+  font-weight:800; font-size:18px; color:#fff;
+  background:var(--red); overflow:hidden; border:2px solid var(--border2);
+}
+.jovem-card-mobile .jcm-avatar img { width:100%; height:100%; object-fit:cover; border-radius:50%; }
+.jovem-card-mobile .jcm-info { flex:1; min-width:0; }
+.jovem-card-mobile .jcm-name { font-size:15px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.jovem-card-mobile .jcm-meta { font-size:12px; color:var(--text3); margin-top:2px; }
+.jovem-card-mobile .jcm-actions { display:flex; gap:8px; margin-top:8px; flex-wrap:wrap; }
+.jcm-action-btn {
+  background:var(--black3); border:1px solid var(--border); color:var(--text2);
+  font-size:11px; font-weight:600; padding:5px 10px; border-radius:20px;
+  cursor:pointer; transition:all 0.15s; -webkit-tap-highlight-color:transparent;
+  min-height:30px; display:flex; align-items:center; gap:4px;
+}
+.jcm-action-btn:active { background:var(--red-faint); color:var(--red); border-color:var(--red); }
+
+/* ─── RECUPERACAO CARD MOBILE ─── */
+.recup-card-mobile {
+  background:var(--card); border:1px solid var(--border); border-radius:14px;
+  padding:14px 16px; margin-bottom:10px; position:relative; overflow:hidden;
+}
+.recup-card-mobile::before {
+  content:''; position:absolute; left:0; top:0; bottom:0;
+  width:4px; background:var(--red); border-radius:4px 0 0 4px;
+}
+.rcm-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+.rcm-name { font-size:15px; font-weight:700; }
+.rcm-meta { font-size:12px; color:var(--text3); margin-top:2px; }
+.rcm-actions { display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
+.rcm-btn {
+  flex:1; min-width:80px; padding:8px 10px; border-radius:8px; border:none;
+  font-size:12px; font-weight:700; cursor:pointer; text-align:center;
+  -webkit-tap-highlight-color:transparent; min-height:36px;
+}
+.rcm-btn-wpp { background:rgba(37,211,102,0.15); color:#25D366; }
+.rcm-btn-contact { background:rgba(59,130,246,0.12); color:var(--blue); }
+.rcm-btn-recover { background:rgba(34,197,94,0.12); color:var(--green); }
+
+/* ─── FREQ CARD MOBILE ─── */
+.freq-card-mobile {
+  background:var(--card); border:1px solid var(--border); border-radius:12px;
+  padding:12px 14px; display:flex; align-items:center; gap:12px;
+  transition:border-color 0.15s; position:relative;
+}
+.fcm-check {
+  width:44px; height:44px; flex-shrink:0; border-radius:50%;
+  border:2px solid var(--border); background:var(--black3);
+  display:flex; align-items:center; justify-content:center;
+  font-size:20px; cursor:pointer; transition:all 0.15s;
+  -webkit-tap-highlight-color:transparent;
+}
+.fcm-check.present { border-color:var(--green); background:rgba(34,197,94,0.15); }
+.fcm-check.absent  { border-color:var(--red);   background:rgba(212,43,43,0.12); }
+.fcm-info { flex:1; min-width:0; }
+.fcm-name { font-size:14px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.fcm-sub  { font-size:11px; color:var(--text3); margin-top:2px; }
+
+/* ─── BOTTOM SHEET ─── */
+.bottom-sheet-overlay {
+  display:none; position:fixed; inset:0; z-index:400;
+  background:rgba(0,0,0,0.6);
+}
+.bottom-sheet-overlay.open { display:flex; align-items:flex-end; }
+.bottom-sheet {
+  width:100%; background:var(--black2); border-radius:20px 20px 0 0;
+  padding:16px 20px 32px; transform:translateY(100%);
+  transition:transform 0.3s cubic-bezier(0.32,0.72,0,1);
+  max-height:85vh; overflow-y:auto;
+}
+.bottom-sheet-overlay.open .bottom-sheet { transform:translateY(0); }
+.bs-handle { width:40px; height:4px; background:rgba(255,255,255,0.2); border-radius:2px; margin:0 auto 16px; }
+.bs-title { font-size:17px; font-weight:700; margin-bottom:16px; }
+.bs-action {
+  display:flex; align-items:center; gap:14px; padding:14px 0;
+  border-bottom:1px solid var(--border); cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
+}
+.bs-action:last-child { border-bottom:none; }
+.bs-action .bs-icon { font-size:22px; width:36px; text-align:center; }
+.bs-action span { font-size:15px; font-weight:500; }
+
+/* ─── SKELETON LOADING ─── */
+.skeleton {
+  background:linear-gradient(90deg,var(--card) 25%,var(--card2) 50%,var(--card) 75%);
+  background-size:200% 100%;
+  animation:skeleton-shimmer 1.4s infinite;
+  border-radius:8px;
+}
+@keyframes skeleton-shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+.skeleton-line { height:14px; margin-bottom:8px; }
+.skeleton-circle { border-radius:50%; }
+.skeleton-card { height:72px; margin-bottom:10px; border-radius:14px; }
+
+/* ─── PROGRESS BAR ─── */
+.progress-bar-wrap { background:rgba(255,255,255,0.07); border-radius:8px; height:8px; overflow:hidden; }
+.progress-bar-fill { height:100%; background:var(--red); border-radius:8px; transition:width 0.6s ease; }
+.progress-bar-fill.green { background:var(--green); }
+
+/* ─── MOBILE OVERRIDES ─── */
+@media(max-width:768px) {
+  /* Layout */
+  .bottom-nav { display:flex; flex-direction:column; }
+  .mobile-menu-btn { display:block; }
+  .fab { display:flex; }
+
+  /* Topbar */
+  .topbar { padding:0 16px; height:56px; }
+  .page-title { font-size:17px; }
+  .page-subtitle { font-size:11px; }
+  .topbar-right .btn-sm { display:none; }
+  #topAddBtn { display:none; }
+
+  /* Content */
+  .content { padding:16px 14px 88px; }
+
+  /* KPI cards: 2 colunas */
+  .kpi-grid { grid-template-columns:1fr 1fr !important; gap:10px; }
+  .kpi-grid-3 { grid-template-columns:1fr 1fr !important; gap:10px; }
+  .kpi-card { padding:14px 12px; }
+  .kpi-value { font-size:22px; }
+
+  /* Charts responsive */
+  .two-col,.three-col { grid-template-columns:1fr; gap:12px; }
+  .chart-wrap { height:200px; }
+
+  /* Funil: 2x2 */
+  .funil-grid { grid-template-columns:1fr 1fr !important; gap:10px; }
+  .funil-num { font-size:28px; }
+
+  /* Tables → ocultar em páginas mobile */
+  .mobile-hide-table table { display:none; }
+  .mobile-hide-table .table-head { border-radius:14px; }
+
+  /* Scroll horizontal fix */
+  .content { overflow-x:hidden; }
+  * { max-width:100%; box-sizing:border-box; }
+  table { min-width:unset; }
+
+  /* Modals */
+  .modal-box {
+    width:100% !important; max-width:100% !important;
+    margin:0; border-radius:20px 20px 0 0;
+    position:fixed; bottom:0; top:auto !important;
+    max-height:92vh; overflow-y:auto;
+    padding-bottom:env(safe-area-inset-bottom,20px);
+  }
+  .modal-overlay {
+    align-items:flex-end !important;
+  }
+
+  /* Save button in forms — fixed footer */
+  .form-save-fixed {
+    position:sticky; bottom:0; background:var(--black2);
+    padding:12px 0 0; margin-top:8px;
+    border-top:1px solid var(--border);
+  }
+
+  /* Touch targets */
+  .btn { min-height:44px; padding:10px 18px; }
+  .filter-tab { min-height:36px; font-size:12px; }
+  .action-btn { min-height:36px; min-width:36px; }
+  .nav-item { min-height:44px; }
+
+  /* Search */
+  .search-input { width:100%; margin-top:8px; font-size:15px; padding:10px 14px; }
+  .table-head { flex-direction:column; align-items:flex-start !important; gap:8px; }
+
+  /* Sidebar over content when open */
+  .sidebar.open { transform:translateX(0) !important; }
+
+  /* Aniversários */
+  .aniv-card { flex-wrap:wrap; }
+  .aniv-dias { font-size:18px; }
+
+  /* Atividades */
+  .ativ-footer { flex-direction:column; }
+}
+
+/* ─── VERY SMALL ─── */
+@media(max-width:360px) {
+  .content { padding:12px 10px 88px; }
+  .kpi-grid, .kpi-grid-3 { grid-template-columns:1fr 1fr !important; gap:8px; }
+  .funil-grid { grid-template-columns:1fr 1fr !important; gap:8px; }
+}
 </style>
 </head>
 <body>
+
+<!-- ═══ SIDEBAR OVERLAY MOBILE ═══ -->
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+<!-- ═══ BOTTOM SHEET ACTIONS ═══ -->
+<div class="bottom-sheet-overlay" id="bsOverlay" onclick="closeBs()">
+  <div class="bottom-sheet" id="bsContent">
+    <div class="bs-handle"></div>
+    <div class="bs-title" id="bsTitle">Ações</div>
+    <div id="bsActions"></div>
+  </div>
+</div>
+
+<!-- ═══ FAB ═══ -->
+<button class="fab" id="fabBtn" onclick="handleAddBtn()" title="Novo">＋</button>
+
+<!-- ═══ BOTTOM NAV ═══ -->
+<nav class="bottom-nav" id="bottomNav">
+  <div class="bottom-nav-inner">
+    <button class="bnav-item active" data-page="dashboard" onclick="bnavGo('dashboard',this)">
+      <span class="bnav-icon">📊</span>Dashboard
+    </button>
+    <button class="bnav-item" data-page="jovens" onclick="bnavGo('jovens',this)">
+      <span class="bnav-icon">👥</span>Jovens
+    </button>
+    <button class="bnav-item" data-page="frequencia" onclick="bnavGo('frequencia',this)">
+      <span class="bnav-icon">✅</span>Freq.
+    </button>
+    <button class="bnav-item" data-page="recuperacao" onclick="bnavGo('recuperacao',this)">
+      <span class="bnav-icon">🚑</span>Recup.
+    </button>
+    <button class="bnav-item bnav-more" onclick="openMobileMenu()">
+      <span class="bnav-icon">☰</span>Mais
+    </button>
+  </div>
+</nav>
 
 <!-- ═══ LOADING ═══ -->
 <div id="loadingScreen" style="display:none;position:fixed;inset:0;z-index:9999;background:#0A0A0A;flex-direction:column;align-items:center;justify-content:center;gap:28px">
@@ -558,6 +844,7 @@ td.mono { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight
   <!-- MAIN -->
   <div class="main">
     <div class="topbar">
+      <button class="mobile-menu-btn" onclick="openSidebar()" aria-label="Menu">☰</button>
       <div>
         <div class="page-title" id="pageTitle">Dashboard</div>
         <div class="page-subtitle" id="pageSubtitle">Visão geral dos jovens</div>
@@ -702,7 +989,7 @@ td.mono { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight
       </div>
 
       <!-- ═══ JOVENS ═══ -->
-      <div class="page" id="page-jovens">
+      <div class="page mobile-hide-table" id="page-jovens">
         <div class="kpi-grid" style="margin-bottom:20px" id="jovensKpis"></div>
         <div class="filter-tabs" id="statusTabs">
           <button class="filter-tab active" onclick="filterStatus('todos',this)">Todos</button>
@@ -714,13 +1001,14 @@ td.mono { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight
         <div class="table-wrap">
           <div class="table-head">
             <span class="table-head-title">Base de Jovens</span>
-            <input class="search-input" placeholder="🔍 Buscar nome..." oninput="filterJovens(this.value)">
+            <input class="search-input" id="jovensSearch" placeholder="🔍 Buscar nome..." oninput="filterJovens(this.value)">
           </div>
           <table>
             <thead><tr><th>Nome</th><th>Idade</th><th>Contato</th><th>Endereço</th><th>Departamento</th><th>Líder</th><th>Status</th><th>Freq.</th><th>Ações</th></tr></thead>
             <tbody id="jovensTable"></tbody>
           </table>
-        </div>
+              <div id="jovensMobileCards" style="display:none;margin-top:12px"></div>
+      </div>
       </div>
 
       <!-- ═══ FREQUÊNCIA ═══ -->
@@ -746,7 +1034,8 @@ td.mono { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight
             <thead><tr><th>Nome</th><th>Departamento</th><th>Frequência</th><th>Última Presença</th><th>Faltas Seguidas</th><th>Status</th></tr></thead>
             <tbody id="freqTable"></tbody>
           </table>
-        </div>
+              <div id="freqMobileList" style="display:none;margin-top:12px"></div>
+      </div>
       </div>
 
       <!-- ═══ RECUPERAÇÃO ═══ -->
@@ -761,7 +1050,8 @@ td.mono { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight
             <thead><tr><th>Jovem</th><th>Status</th><th>Responsável</th><th>Etapa</th><th>Motivo</th><th>Próxima Ação</th><th>Ações</th></tr></thead>
             <tbody id="recupTable"></tbody>
           </table>
-        </div>
+              <div id="recupMobileCards" style="display:none;margin-top:12px"></div>
+      </div>
       </div>
 
       <!-- ═══ DEPARTAMENTOS ═══ -->
@@ -4094,6 +4384,320 @@ document.addEventListener('DOMContentLoaded', () => {
 // -- CREATE POLICY "auth_insert" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id='ruja-jovens-fotos');
 // -- CREATE POLICY "auth_update" ON storage.objects FOR UPDATE TO authenticated USING (bucket_id='ruja-jovens-fotos');
 // -- CREATE POLICY "auth_delete" ON storage.objects FOR DELETE TO authenticated USING (bucket_id='ruja-jovens-fotos');
+
+// ═══════════════════════════════════════════════════════════════
+// MOBILE FIRST — JAVASCRIPT
+// ═══════════════════════════════════════════════════════════════
+
+// ─── Detect mobile ───────────────────────────────────────────
+function isMobile() { return window.innerWidth <= 768; }
+
+// ─── Sidebar open/close (mobile) ─────────────────────────────
+function openSidebar() {
+  document.querySelector('.sidebar').classList.add('open');
+  document.getElementById('sidebarOverlay').classList.add('open');
+}
+function closeSidebar() {
+  document.querySelector('.sidebar').classList.remove('open');
+  document.getElementById('sidebarOverlay').classList.remove('open');
+}
+
+// ─── Bottom Nav navigation ───────────────────────────────────
+function bnavGo(page, el) {
+  // Update bottom nav active state
+  document.querySelectorAll('.bnav-item').forEach(b=>b.classList.remove('active'));
+  if(el) el.classList.add('active');
+  // Sync sidebar nav
+  document.querySelectorAll('.nav-item').forEach(n=>{
+    n.classList.toggle('active', n.getAttribute('onclick') && n.getAttribute('onclick').includes("'"+page+"'"));
+  });
+  closeSidebar();
+  // Navigate
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-'+page).classList.add('active');
+  currentPage = page;
+  const t = pageTitles[page]||[page,''];
+  document.getElementById('pageTitle').textContent = t[0];
+  document.getElementById('pageSubtitle').textContent = t[1];
+  renderPage(page);
+  // Render mobile views
+  setTimeout(()=>{ try { renderMobileViews(page); } catch(e){} }, 50);
+}
+
+// ─── "Mais" menu ─────────────────────────────────────────────
+function openMobileMenu() {
+  openBs('Menu', [
+    { icon:'🏠', label:'Dashboard',    action:"bnavGoFromBs('dashboard')" },
+    { icon:'📅', label:'Aniversários', action:"bnavGoFromBs('aniversarios')" },
+    { icon:'🎯', label:'Metas',        action:"bnavGoFromBs('metas')" },
+    { icon:'🏛️',  label:'Departamentos',action:"bnavGoFromBs('departamentos')" },
+    { icon:'👤', label:'Líderes',      action:"bnavGoFromBs('lideres')" },
+    { icon:'⚙️', label:'Configurações',action:"bnavGoFromBs('config')" },
+    { icon:'🚪', label:'Sair',         action:'doLogout()' },
+  ]);
+}
+function bnavGoFromBs(page) {
+  closeBs();
+  setTimeout(()=>{
+    const btn = document.querySelector('.bnav-item[data-page="'+page+'"]');
+    bnavGo(page, btn);
+  }, 180);
+}
+
+// ─── Bottom Sheet ─────────────────────────────────────────────
+function openBs(title, actions) {
+  document.getElementById('bsTitle').textContent = title;
+  const container = document.getElementById('bsActions');
+  container.innerHTML = actions.map(a=>
+    `<div class="bs-action" onclick="${a.action};closeBs()">
+       <span class="bs-icon">${a.icon}</span>
+       <span>${a.label}</span>
+     </div>`
+  ).join('');
+  document.getElementById('bsOverlay').classList.add('open');
+}
+function closeBs() {
+  document.getElementById('bsOverlay').classList.remove('open');
+}
+
+// ─── Jovem Quick Actions ─────────────────────────────────────
+function openJovemActions(id) {
+  const j = DATA.jovens.find(x=>x.id===id);
+  if(!j) return;
+  openBs(j.nome || 'Jovem', [
+    { icon:'✏️', label:'Editar cadastro', action:`openModalJovem(${JSON.stringify(id)})` },
+    { icon:'🚑', label:'Plano de recuperação', action:`abrirRecupJovem(${JSON.stringify(id)})` },
+    { icon:'📱', label:'WhatsApp', action:`window.open('https://wa.me/55'+('${j.contato||""}').replace(/\D/g,''))` },
+    { icon:'🗑️', label:'Excluir', action:`deleteJovemConfirm(${JSON.stringify(id)})` },
+  ]);
+}
+function deleteJovemConfirm(id) {
+  if(confirm('Confirma exclusão?')) deleteJovem(id);
+}
+
+// ─── Render mobile views ──────────────────────────────────────
+function renderMobileViews(page) {
+  if(!isMobile()) return;
+  if(page==='jovens')       renderJovensMobile();
+  if(page==='recuperacao')  renderRecupMobile();
+  if(page==='frequencia')   renderFreqMobile();
+}
+
+// ─── Jovens Mobile Cards ──────────────────────────────────────
+function renderJovensMobile() {
+  const container = document.getElementById('jovensMobileCards');
+  if(!container) return;
+  const search = document.getElementById('jovensSearch');
+  const q = search ? search.value.toLowerCase() : '';
+  let list = DATA.jovens || [];
+  if(q) list = list.filter(j=>(j.nome||'').toLowerCase().includes(q));
+  if(window._statusFilter && window._statusFilter!=='todos')
+    list = list.filter(j=>calcStatus(j.id)===window._statusFilter);
+
+  if(list.length===0) {
+    container.innerHTML='<div class="empty-state"><div class="icon">👥</div><p>Nenhum jovem encontrado</p></div>';
+  } else {
+    container.innerHTML = list.map(j=>{
+      const status = calcStatus(j.id);
+      const freq = getFreqPct(j.id);
+      const initials = (j.nome||'J').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+      const fotoHtml = j.foto_url
+        ? `<img src="${j.foto_url}" onerror="this.style.display='none'" alt="">`
+        : '';
+      return `<div class="jovem-card-mobile" style="margin-bottom:10px">
+        <div class="jcm-avatar">${fotoHtml}${fotoHtml?'':initials}</div>
+        <div class="jcm-info">
+          <div class="jcm-name">${j.nome||'—'}</div>
+          <div class="jcm-meta">${j.departamentos||'Sem depto'} &middot; ${freq}% presença</div>
+          <div class="jcm-meta" style="margin-top:2px">${getStatusBadge(status)}</div>
+          <div class="jcm-actions">
+            <button class="jcm-action-btn" onclick="openJovemActions('${j.id}')">⋯ Ações</button>
+            ${j.contato?`<button class="jcm-action-btn" onclick="window.open('https://wa.me/55'+('${j.contato}').replace(/\D/g,''))">📱 WhatsApp</button>`:''}
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  // Toggle table/cards
+  const tableWrap = document.querySelector('#page-jovens .table-wrap');
+  if(tableWrap) tableWrap.style.display='none';
+  container.style.display='block';
+}
+
+// ─── Recuperação Mobile Cards ────────────────────────────────
+function renderRecupMobile() {
+  const container = document.getElementById('recupMobileCards');
+  if(!container) return;
+  const list = DATA.recuperacoes || [];
+  if(list.length===0) {
+    container.innerHTML='<div class="empty-state"><div class="icon">🚑</div><p>Nenhum plano ativo</p></div>';
+  } else {
+    container.innerHTML = list.map(r=>{
+      const j = DATA.jovens.find(x=>x.id===r.jovemId);
+      const nome = j ? j.nome : (r.jovemNome||'Jovem');
+      const tel  = j ? (j.contato||'') : '';
+      return `<div class="recup-card-mobile">
+        <div class="rcm-top">
+          <div>
+            <div class="rcm-name">${nome}</div>
+            <div class="rcm-meta">${r.responsavel||'—'} &middot; Etapa ${r.etapa||1}</div>
+          </div>
+          <span class="badge badge-risco">${r.status||'Ativo'}</span>
+        </div>
+        <div class="rcm-meta" style="margin-bottom:8px">Motivo: ${r.motivo||'—'}</div>
+        <div class="rcm-actions">
+          ${tel?`<button class="rcm-btn rcm-btn-wpp" onclick="window.open('https://wa.me/55'+('${tel}').replace(/\D/g,''))">📱 WhatsApp</button>`:''}
+          <button class="rcm-btn rcm-btn-contact" onclick="openRecupContato('${r.id}')">📝 Contato</button>
+          <button class="rcm-btn rcm-btn-recover" onclick="marcarRecuperado('${r.id}')">✅ Recuperado</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  const tableWrap = document.querySelector('#page-recuperacao .table-wrap');
+  if(tableWrap) tableWrap.style.display='none';
+  container.style.display='block';
+}
+function openRecupContato(id) {
+  const r = (DATA.recuperacoes||[]).find(x=>x.id===id);
+  if(!r) return;
+  const obs = prompt('Registrar observação do contato:', r.proximaAcao||'');
+  if(obs===null) return;
+  r.proximaAcao = obs;
+  upsertRecuperacao(r).then(()=>{ showToast('Contato registrado!'); renderRecupMobile(); });
+}
+function marcarRecuperado(id) {
+  if(!confirm('Marcar como recuperado?')) return;
+  const r = (DATA.recuperacoes||[]).find(x=>x.id===id);
+  if(!r) return;
+  r.status = 'Recuperado';
+  upsertRecuperacao(r).then(()=>{ showToast('✅ Marcado como recuperado!'); renderAll(); });
+}
+
+// ─── Frequência Mobile ────────────────────────────────────────
+let _freqPresentes = {};
+function renderFreqMobile() {
+  const container = document.getElementById('freqMobileList');
+  if(!container) return;
+  let list = DATA.jovens || [];
+
+  if(window._freqFiltro && window._freqFiltro!=='Todos') {
+    if(window._freqFiltro==='SemDepto') list=list.filter(j=>!j.departamentos||j.departamentos.trim()==='');
+    else list=list.filter(j=>(j.departamentos||'').includes(window._freqFiltro));
+  }
+
+  if(list.length===0) {
+    container.innerHTML='<div class="empty-state"><div class="icon">✅</div><p>Nenhum jovem para exibir</p></div>';
+  } else {
+    // Botão Marcar Todos
+    const headerHtml = `
+      <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+        <button class="btn btn-primary" style="flex:1" onclick="marcarTodosPresentes()">✅ Marcar Todos Presentes</button>
+        <button class="btn btn-sm" style="background:rgba(212,43,43,0.12);color:var(--red);border:1px solid rgba(212,43,43,0.3)" onclick="salvarFreqLote()">💾 Salvar</button>
+      </div>`;
+
+    const cards = list.map(j=>{
+      const presente = _freqPresentes[j.id] || false;
+      const freq = getFreqPct(j.id);
+      return `<div class="freq-card-mobile" style="margin-bottom:8px" id="fcm-${j.id}">
+        <div class="fcm-check ${presente?'present':''}" onclick="toggleFreqPresente('${j.id}')">
+          ${presente?'✅':'○'}
+        </div>
+        <div class="fcm-info">
+          <div class="fcm-name">${j.nome||'—'}</div>
+          <div class="fcm-sub">${j.departamentos||'Sem depto'} · ${freq}% presença</div>
+        </div>
+      </div>`;
+    }).join('');
+
+    container.innerHTML = headerHtml + cards;
+  }
+
+  const tableWrap = document.querySelector('#page-frequencia .table-wrap');
+  if(tableWrap) tableWrap.style.display='none';
+  container.style.display='block';
+}
+function toggleFreqPresente(jovemId) {
+  _freqPresentes[jovemId] = !_freqPresentes[jovemId];
+  const el = document.getElementById('fcm-'+jovemId);
+  if(!el) return;
+  const check = el.querySelector('.fcm-check');
+  const present = _freqPresentes[jovemId];
+  check.className = 'fcm-check ' + (present?'present':'');
+  check.textContent = present?'✅':'○';
+}
+function marcarTodosPresentes() {
+  let list = DATA.jovens || [];
+  if(window._freqFiltro && window._freqFiltro!=='Todos') {
+    if(window._freqFiltro==='SemDepto') list=list.filter(j=>!j.departamentos||j.departamentos.trim()==='');
+    else list=list.filter(j=>(j.departamentos||'').includes(window._freqFiltro));
+  }
+  list.forEach(j=>{ _freqPresentes[j.id]=true; });
+  renderFreqMobile();
+  showToast('Todos marcados como presentes!');
+}
+async function salvarFreqLote() {
+  const hoje = new Date().toISOString().split('T')[0];
+  const presentes = Object.entries(_freqPresentes).filter(([,v])=>v).map(([id])=>id);
+  if(presentes.length===0) { showToast('Nenhum marcado!'); return; }
+  let salvos=0;
+  for(const jovemId of presentes) {
+    try {
+      await upsertFrequencia({ jovemId, data:hoje, presente:true, id: crypto.randomUUID? crypto.randomUUID(): Date.now().toString() });
+      salvos++;
+    } catch(e){}
+  }
+  showToast(`✅ ${salvos} presenças salvas!`);
+  _freqPresentes = {};
+  renderAll();
+}
+
+// ─── Hook into existing navigate ─────────────────────────────
+const _origNavigate = navigate;
+function navigate(page, el) {
+  _origNavigate(page, el);
+  // Sync bottom nav
+  document.querySelectorAll('.bnav-item[data-page]').forEach(b=>{
+    b.classList.toggle('active', b.getAttribute('data-page')===page);
+  });
+  closeSidebar();
+  if(isMobile()) setTimeout(()=>{ try{ renderMobileViews(page); } catch(e){} }, 60);
+}
+
+// ─── Resize handler ───────────────────────────────────────────
+window.addEventListener('resize', ()=>{
+  if(!isMobile()) {
+    // Restore tables
+    document.querySelectorAll('.table-wrap').forEach(t=>t.style.display='');
+    document.querySelectorAll('#jovensMobileCards,#freqMobileList,#recupMobileCards').forEach(c=>{
+      if(c) c.style.display='none';
+    });
+  } else {
+    renderMobileViews(currentPage||'dashboard');
+  }
+});
+
+// ─── Override filterJovens/filterStatus to also refresh mobile ─
+const _origFilterJovens = window.filterJovens;
+function filterJovens(q) {
+  if(_origFilterJovens) _origFilterJovens(q);
+  if(isMobile()) setTimeout(renderJovensMobile,50);
+}
+const _origFilterStatus = window.filterStatus;
+function filterStatus(status, el) {
+  window._statusFilter = status;
+  if(_origFilterStatus) _origFilterStatus(status, el);
+  if(isMobile()) setTimeout(renderJovensMobile,50);
+}
+const _origSetFreqFiltro = window.setFreqFiltro;
+function setFreqFiltro(f, el) {
+  window._freqFiltro = f;
+  if(_origSetFreqFiltro) _origSetFreqFiltro(f, el);
+  if(isMobile()) setTimeout(renderFreqMobile,50);
+}
+// ═══════════════════════════════════════════════════════════════
+
 </script>
 </body>
 </html>
