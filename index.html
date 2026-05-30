@@ -1113,8 +1113,8 @@ td.mono { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight
 
         <!-- Visão e Versículo -->
         <div class="two-col" style="margin-bottom:20px">
-          <div id="lsVisao"></div>
-          <div id="lsVersiculo"></div>
+          <div id="lsVisaoDisplay"></div>
+          <div id="lsVersiculoDisplay"></div>
         </div>
 
         <!-- Botão de editar -->
@@ -1411,7 +1411,7 @@ td.mono { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight
     <!-- Lista de jovens com checkbox -->
     <div class="form-group">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-        <label class="form-label" style="margin:0">Jovens — marque os <strong>presentes</strong></label>
+        <span class="form-label" style="margin:0">Jovens — marque os <strong>presentes</strong></span>
         <div style="display:flex;gap:8px">
           <button class="btn btn-ghost btn-sm" onclick="freqMarcarTodos(true)">✅ Todos</button>
           <button class="btn btn-ghost btn-sm" onclick="freqMarcarTodos(false)">❌ Nenhum</button>
@@ -4146,7 +4146,7 @@ function renderLiderSupremo() {
     </div>`;
 
   // ── Visão
-  document.getElementById('lsVisao').innerHTML = `
+  document.getElementById('lsVisaoDisplay').innerHTML = `
     <div class="card">
       <div class="card-header"><span class="card-title">🎯 Visão do Ministério</span></div>
       ${ls.visao
@@ -4155,7 +4155,7 @@ function renderLiderSupremo() {
     </div>`;
 
   // ── Versículo
-  document.getElementById('lsVersiculo').innerHTML = `
+  document.getElementById('lsVersiculoDisplay').innerHTML = `
     <div class="card" style="background:linear-gradient(135deg,var(--card) 0%,rgba(212,43,43,0.06) 100%);border-color:var(--border2)">
       <div class="card-header"><span class="card-title">📖 Versículo do Líder</span></div>
       ${ls.versiculoLider
