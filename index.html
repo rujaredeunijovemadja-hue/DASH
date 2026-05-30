@@ -1411,48 +1411,39 @@ function ocultarErroLogin() {
 
 // ─── MOSTRAR APP (carrega dados do Supabase) ───────────────────
 async function mostrarApp(nome, funcao) {
-  const loading    = document.getElementById('loadingScreen');
-  const loadingMsg = document.getElementById('loadingMsg');
-  const setMsg = (msg) => { if (loadingMsg) loadingMsg.textContent = msg; };
+  // ── Abre o app IMEDIATAMENTE — não trava esperando Supabase ──
+  document.getElementById('loginPage').style.display   = 'none';
+  document.getElementById('appShell').style.display    = 'flex';
+  document.getElementById('loadingScreen').style.display = 'none';
 
-  const forcarAbertura = () => {
-    if (loading) loading.style.display = 'none';
-    document.getElementById('appShell').style.display = 'flex';
-  };
+  document.getElementById('userName').textContent   = nome;
+  document.getElementById('userRole').textContent   = funcao;
+  document.getElementById('userAvatar').textContent = nome.charAt(0).toUpperCase();
 
-  const emergencia = setTimeout(forcarAbertura, 15000);
+  showSyncBadge('syncing');
 
+  // ── Carrega configs em background (timeout 5s) ────────────────
   try {
-    document.getElementById('loginPage').style.display = 'none';
-    loading.style.display = 'flex';
-    document.getElementById('userName').textContent    = nome;
-    document.getElementById('userRole').textContent    = funcao;
-    document.getElementById('userAvatar').textContent  = nome.charAt(0).toUpperCase();
+    await Promise.race([
+      carregarConfigs(),
+      new Promise((_,rej) => setTimeout(() => rej(new Error('timeout')), 5000))
+    ]);
+  } catch(e) { console.warn('Configs erro/timeout:', e.message); }
 
-    // 1. Configs globais (agenda_url, gas_url de backup, metas, regras, lider_supremo)
-    setMsg('Carregando configurações...');
-    await carregarConfigs();
-
-    // 2. Carrega todos os dados do Supabase em paralelo
-    setMsg('Carregando dados...');
-    await carregarTodos();
-
-    setMsg('Preparando painel...');
-    try { renderAll(); } catch(e) { console.warn('renderAll erro:', e); }
-
-    clearTimeout(emergencia);
-    loading.style.display = 'none';
-    document.getElementById('appShell').style.display = 'flex';
+  // ── Carrega dados em background (timeout 8s) ─────────────────
+  try {
+    await Promise.race([
+      carregarTodos(),
+      new Promise((_,rej) => setTimeout(() => rej(new Error('timeout')), 8000))
+    ]);
     showSyncBadge('online');
-
   } catch(e) {
-    console.error('mostrarApp erro crítico:', e);
-    clearTimeout(emergencia);
-    if (loading) loading.style.display = 'none';
-    document.getElementById('appShell').style.display = 'flex';
+    console.warn('Dados erro/timeout:', e.message);
     showSyncBadge('error');
-    try { renderAll(); } catch(_) {}
   }
+
+  // ── Renderiza com o que tiver ─────────────────────────────────
+  try { renderAll(); } catch(e) { console.warn('renderAll erro:', e); }
 }
 
 // ─── CARREGAR CONFIGS ──────────────────────────────────────────
