@@ -4929,5 +4929,227 @@ async function salvarFreqLote() {
 }
 
 </script>
+<script>
+// MIGRACAO COMPLETA: localStorage/cache/GAS -> Supabase.
+function _rujaJson(valor, fallback) {
+  if (!valor) return fallback;
+  try { return JSON.parse(valor); } catch (_) { return fallback; }
+}
+
+function _rujaUnicos(listas) {
+  const map = new Map();
+  listas.flat().forEach((item) => {
+    if (!item || item.id === undefined || item.id === null || item.id === '') return;
+    const id = String(item.id);
+    map.set(id, { ...map.get(id), ...item, id });
+  });
+  return [...map.values()];
+}
+
+function _rujaDadosLocais() {
+  return {
+    jovens: _rujaUnicos([_rujaJson(localStorage.getItem('jovens'), []), _rujaJson(localStorage.getItem('ruja_cache_jovens'), [])]),
+    frequencias: _rujaUnicos([_rujaJson(localStorage.getItem('frequencias'), [])]),
+    recuperacoes: _rujaUnicos([_rujaJson(localStorage.getItem('recuperacoes'), [])]),
+    departamentos: _rujaUnicos([_rujaJson(localStorage.getItem('departamentos'), []), _rujaJson(localStorage.getItem('ruja_cache_departamentos'), [])]),
+    lideres: _rujaUnicos([_rujaJson(localStorage.getItem('lideres'), [])]),
+    historicoMensal: _rujaJson(localStorage.getItem('historicoMensal'), []),
+    liderSupremo: _rujaJson(localStorage.getItem('liderSupremo'), null),
+    metas: _rujaJson(localStorage.getItem('metas'), null),
+    regras: _rujaJson(localStorage.getItem('regras'), null),
+  };
+}
+
+function _rujaDadosMemoria() {
+  return {
+    jovens: Array.isArray(jovens) ? jovens : [],
+    frequencias: Array.isArray(frequencias) ? frequencias : [],
+    recuperacoes: Array.isArray(recuperacoes) ? recuperacoes : [],
+    departamentos: Array.isArray(departamentos) ? departamentos : [],
+    lideres: Array.isArray(lideres) ? lideres : [],
+    historicoMensal: Array.isArray(historicoMensal) ? historicoMensal : [],
+    liderSupremo, metas, regras,
+  };
+}
+
+async function _rujaDadosGAS() {
+  const url = GAS_URL || localStorage.getItem('gasUrl') || '';
+  if (!url) return null;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 25000);
+  try {
+    const resposta = await fetch(url, { signal: controller.signal });
+    if (!resposta.ok) throw new Error('GAS respondeu HTTP ' + resposta.status);
+    return await resposta.json();
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function _rujaJovem(j) {
+  return {
+    id: String(j.id), nome: j.nome || '', idade: parseInt(j.idade) || 0,
+    contato: j.contato || '', instagram: j.instagram || '', endereco: j.endereco || '',
+    departamento: j.departamento || j.departamentos || '', lider: j.lider || '', status: j.status || 'Em Risco',
+    entrada: j.entrada || '', batizado: j.batizado || 'nao',
+    data_batismo: j.dataBatismo || j.data_batismo || '', data_nasc: j.dataNasc || j.data_nasc || '',
+    obs: j.obs || '', foto_path: j.foto_path || '', foto_url: j.foto_url || '',
+    atualizado_em: new Date().toISOString(),
+  };
+}
+
+function _rujaFrequencia(f) {
+  return {
+    id: String(f.id), jovem_id: String(f.jovemId || f.jovem_id || ''), data: f.data || '',
+    evento: f.evento || '', presenca: f.presenca || (f.presente ? 'presente' : 'falta'), obs: f.obs || '',
+  };
+}
+
+function _rujaRecuperacao(r) {
+  return {
+    id: String(r.id), jovem_id: String(r.jovemId || r.jovem_id || ''), data_inicio: r.dataInicio || r.data_inicio || '',
+    lider_resp: r.liderResp || r.responsavel || r.lider_resp || '', motivo: r.motivo || '',
+    status: r.status || 'ativo', obs: r.obs || '', atualizado_em: new Date().toISOString(),
+  };
+}
+
+function _rujaDepartamento(d) {
+  return {
+    id: String(d.id), nome: d.nome || '', icone: d.icone || '🏛',
+    lider: d.lider || '', capacidade: parseInt(d.capacidade) || 0,
+    descricao: d.desc || d.descricao || '', atualizado_em: new Date().toISOString(),
+  };
+}
+
+function _rujaLider(l) {
+  return {
+    id: String(l.id), nome: l.nome || '', contato: l.contato || '',
+    departamento: l.departamento || '', funcao: l.funcao || '',
+    data_nasc: l.dataNasc || l.data_nasc || '', atualizado_em: new Date().toISOString(),
+  };
+}
+
+async function _rujaUpsert(tabela, linhas, opcoes) {
+  const validas = linhas.filter(Boolean);
+  if (!validas.length) return 0;
+  for (let i = 0; i < validas.length; i += 500) {
+    const { error } = await sb.from(tabela).upsert(validas.slice(i, i + 500), opcoes || { onConflict: 'id' });
+    if (error) throw new Error(tabela + ': ' + error.message);
+  }
+  return validas.length;
+}
+
+async function migrarTudoParaSupabase(opts = {}) {
+  if (!sb) throw new Error('Supabase nao inicializado.');
+  showSyncBadge('syncing');
+
+  const local = _rujaDadosLocais();
+  const memoria = _rujaDadosMemoria();
+  let gas = null;
+  if (opts.incluirGAS !== false) {
+    try { gas = await _rujaDadosGAS(); }
+    catch (e) { console.warn('[RUJA Migracao] GAS indisponivel:', e.message); }
+  }
+  const origem = gas || {};
+
+  const todosJovens = _rujaUnicos([memoria.jovens, local.jovens, origem.jovens || []]).filter(j => j.nome);
+  const todosDeptos = _rujaUnicos([memoria.departamentos, local.departamentos, origem.departamentos || []]).filter(d => d.nome);
+  const todosLideres = _rujaUnicos([memoria.lideres, local.lideres, origem.lideres || []]).filter(l => l.nome);
+  const todosFreq = _rujaUnicos([memoria.frequencias, local.frequencias, origem.frequencias || []]);
+  const todosRec = _rujaUnicos([memoria.recuperacoes, local.recuperacoes, origem.recuperacoes || []]);
+  const todosHist = [...(memoria.historicoMensal || []), ...(local.historicoMensal || []), ...(origem.historicoMensal || [])];
+
+  const payloadJovens = todosJovens.map(_rujaJovem).filter(j => j.id && j.nome);
+  const idsJovens = new Set(payloadJovens.map(j => j.id));
+  try {
+    const { data } = await sb.from('ruja_jovens').select('id');
+    (data || []).forEach(j => idsJovens.add(String(j.id)));
+  } catch (e) {
+    console.warn('[RUJA Migracao] Nao consegui ler jovens existentes:', e.message);
+  }
+
+  const contagem = {};
+  contagem.departamentos = await _rujaUpsert('ruja_departamentos', todosDeptos.map(_rujaDepartamento).filter(d => d.id && d.nome));
+  contagem.lideres = await _rujaUpsert('ruja_lideres', todosLideres.map(_rujaLider).filter(l => l.id && l.nome));
+  contagem.jovens = await _rujaUpsert('ruja_jovens', payloadJovens);
+  contagem.frequencias = await _rujaUpsert('ruja_frequencias', todosFreq.map(_rujaFrequencia).filter(f => f.id && f.jovem_id && idsJovens.has(f.jovem_id)));
+  contagem.recuperacoes = await _rujaUpsert('ruja_recuperacoes', todosRec.map(_rujaRecuperacao).filter(r => r.id && r.jovem_id && idsJovens.has(r.jovem_id)));
+  contagem.historico = await _rujaUpsert('ruja_historico_mensal', todosHist.filter(h => h && h.mes).map(h => ({
+    mes: h.mes,
+    ativos_depto: parseInt(h.ativosDepto ?? h.ativos_depto) || 0,
+    batizados_depto: parseInt(h.batizadosDepto ?? h.batizados_depto) || 0,
+    total: parseInt(h.total) || 0,
+  })), { onConflict: 'mes' });
+
+  const configs = [
+    ['regras', local.regras || memoria.regras],
+    ['metas', local.metas || memoria.metas],
+    ['lider_supremo', local.liderSupremo || memoria.liderSupremo],
+  ].filter(([, valor]) => valor);
+  for (const [chave, valor] of configs) await salvarConfig(chave, valor);
+
+  await registrarLogMigracao('todas_as_tabelas', Object.values(contagem).reduce((a, b) => a + b, 0), 'sucesso', JSON.stringify(contagem));
+  await carregarTodos();
+  renderAll();
+  showSyncBadge('online');
+  showToast('Migração concluída: dados enviados ao Supabase.');
+  console.log('[RUJA Migracao] Resultado:', contagem);
+  return contagem;
+}
+
+async function syncManual() {
+  try { return await migrarTudoParaSupabase({ incluirGAS: true }); }
+  catch (e) { console.error(e); showSyncBadge('error'); showToast('Erro na migração: ' + e.message); throw e; }
+}
+
+async function pullFromSheets(force) {
+  return migrarTudoParaSupabase({ incluirGAS: true, force: Boolean(force) });
+}
+
+async function pushToSheets() {
+  return migrarTudoParaSupabase({ incluirGAS: false });
+}
+
+async function gravarSnapshotMensal() {
+  const mesAtual = new Date().toISOString().slice(0, 7);
+  const ativosDepto = jovens.filter(j => j.status === 'Ativo' && j.departamento).length;
+  const batizadosDepto = jovens.filter(j => j.status === 'Ativo' && j.departamento && j.batizado === 'sim').length;
+  const snap = { mes: mesAtual, ativosDepto, batizadosDepto, total: jovens.length };
+  const idx = historicoMensal.findIndex(h => h.mes === mesAtual);
+  if (idx !== -1) historicoMensal[idx] = snap; else historicoMensal.push(snap);
+  historicoMensal.sort((a, b) => a.mes.localeCompare(b.mes));
+  localStorage.setItem('historicoMensal', JSON.stringify(historicoMensal));
+  try {
+    await sb.from('ruja_historico_mensal').upsert({
+      mes: mesAtual,
+      ativos_depto: ativosDepto,
+      batizados_depto: batizadosDepto,
+      total: jovens.length,
+    }, { onConflict: 'mes' });
+  } catch (e) {
+    console.warn('[RUJA Supabase] Snapshot mensal nao gravado:', e.message);
+  }
+}
+
+async function saveData() {
+  jovens = jovens.filter(j => j && j.id && j.nome && j.nome.trim());
+  lideres = lideres.filter(l => l && l.id && l.nome && l.nome.trim());
+  departamentos = departamentos.filter(d => d && d.id && d.nome && d.nome.trim());
+  frequencias = frequencias.filter(f => f && f.id && f.jovemId);
+  recuperacoes = recuperacoes.filter(r => r && r.id && r.jovemId);
+
+  localStorage.setItem('jovens', JSON.stringify(jovens));
+  localStorage.setItem('frequencias', JSON.stringify(frequencias));
+  localStorage.setItem('recuperacoes', JSON.stringify(recuperacoes));
+  localStorage.setItem('departamentos', JSON.stringify(departamentos));
+  localStorage.setItem('lideres', JSON.stringify(lideres));
+  localStorage.setItem('liderSupremo', JSON.stringify(liderSupremo));
+  localStorage.setItem('metas', JSON.stringify(metas));
+  localStorage.setItem('regras', JSON.stringify(regras));
+  localStorage.setItem('ruja_cache_jovens', JSON.stringify(jovens));
+  localStorage.setItem('ruja_cache_departamentos', JSON.stringify(departamentos));
+  await gravarSnapshotMensal();
+}
+</script>
 </body>
 </html>
