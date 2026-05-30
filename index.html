@@ -364,6 +364,49 @@ td.mono { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight
 .login-btn { width:100%; padding:14px; background:var(--red); color:#fff; font-size:15px; font-weight:800; border:none; border-radius:10px; cursor:pointer; font-family:'Barlow',sans-serif; text-transform:uppercase; transition:all 0.15s; margin-top:8px; }
 .login-btn:hover { background:var(--red-light); transform:translateY(-1px); }
 
+
+/* ─── FOTO JOVEM ─── */
+.jovem-avatar {
+  width:38px; height:38px; border-radius:50%; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center;
+  font-weight:800; font-size:14px; color:#fff;
+  background:var(--red); overflow:hidden; border:2px solid var(--border);
+}
+.jovem-avatar img { width:100%; height:100%; object-fit:cover; border-radius:50%; }
+.jovem-avatar-lg {
+  width:72px; height:72px; border-radius:50%; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center;
+  font-weight:900; font-size:26px; color:#fff;
+  background:var(--red); overflow:hidden; border:3px solid var(--border2);
+}
+.jovem-avatar-lg img { width:100%; height:100%; object-fit:cover; border-radius:50%; }
+
+/* ─── UPLOAD FOTO ─── */
+.foto-upload-area {
+  display:flex; align-items:center; gap:14px; padding:14px;
+  background:var(--black3); border:1px solid var(--border);
+  border-radius:12px; margin-bottom:16px;
+}
+.foto-preview {
+  width:64px; height:64px; border-radius:50%; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center;
+  font-weight:800; font-size:22px; color:#fff;
+  background:var(--red); overflow:hidden; border:2px solid var(--border2); position:relative;
+}
+.foto-preview img { width:100%; height:100%; object-fit:cover; border-radius:50%; }
+.foto-preview.loading::after {
+  content:''; position:absolute; inset:0; border-radius:50%;
+  background:rgba(0,0,0,0.5);
+}
+.foto-preview.loading::before {
+  content:''; position:absolute; top:50%; left:50%; z-index:1;
+  width:20px; height:20px; margin:-10px 0 0 -10px;
+  border:3px solid rgba(255,255,255,0.3); border-top-color:#fff;
+  border-radius:50%; animation:spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform:rotate(360deg); } }
+.foto-btns { display:flex; flex-direction:column; gap:6px; }
+
 /* ─── TOAST ─── */
 .toast { position:fixed; bottom:24px; right:24px; background:var(--green); color:#000; padding:12px 20px; border-radius:10px; font-weight:600; font-size:14px; z-index:999; transform:translateY(80px); opacity:0; transition:all 0.3s; }
 .toast.show { transform:translateY(0); opacity:1; }
@@ -932,6 +975,25 @@ td.mono { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight
       <span id="modalJovemTitle">Novo Jovem</span>
       <button class="modal-close" onclick="closeModal('modalJovem')">✕</button>
     </div>
+        <!-- ─── FOTO ─── -->
+    <div class="foto-upload-area" id="fotoUploadArea">
+      <div class="foto-preview" id="fotoPreview">
+        <span id="fotoPreviewInicial">?</span>
+      </div>
+      <div class="foto-btns">
+        <div style="font-size:13px;font-weight:600;color:var(--text2);margin-bottom:2px">Foto do Jovem</div>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:8px">JPG, PNG, WEBP · máx. 2MB</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <label class="btn btn-ghost btn-sm" style="cursor:pointer;display:inline-flex;align-items:center;gap:6px">
+            📷 Escolher foto
+            <input type="file" id="jFotoInput" accept="image/jpeg,image/png,image/webp,image/jpg" capture="environment" style="display:none" onchange="onFotoSelecionada(this)">
+          </label>
+          <button class="btn btn-ghost btn-sm" id="btnRemoverFoto" onclick="removerFotoJovem()" style="display:none;color:var(--red);border-color:rgba(212,43,43,0.3)">🗑️ Remover</button>
+        </div>
+        <div id="fotoStatus" style="font-size:11px;color:var(--text3);margin-top:4px"></div>
+      </div>
+    </div>
+
     <div class="form-row">
       <div class="form-group">
         <label class="form-label">Nome Completo *</label>
@@ -1222,6 +1284,25 @@ td.mono { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight
       👑 Perfil do Líder Supremo
       <button class="modal-close" onclick="closeModal('modalLiderSupremo')">✕</button>
     </div>
+        <!-- ─── FOTO ─── -->
+    <div class="foto-upload-area" id="fotoUploadArea">
+      <div class="foto-preview" id="fotoPreview">
+        <span id="fotoPreviewInicial">?</span>
+      </div>
+      <div class="foto-btns">
+        <div style="font-size:13px;font-weight:600;color:var(--text2);margin-bottom:2px">Foto do Jovem</div>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:8px">JPG, PNG, WEBP · máx. 2MB</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <label class="btn btn-ghost btn-sm" style="cursor:pointer;display:inline-flex;align-items:center;gap:6px">
+            📷 Escolher foto
+            <input type="file" id="jFotoInput" accept="image/jpeg,image/png,image/webp,image/jpg" capture="environment" style="display:none" onchange="onFotoSelecionada(this)">
+          </label>
+          <button class="btn btn-ghost btn-sm" id="btnRemoverFoto" onclick="removerFotoJovem()" style="display:none;color:var(--red);border-color:rgba(212,43,43,0.3)">🗑️ Remover</button>
+        </div>
+        <div id="fotoStatus" style="font-size:11px;color:var(--text3);margin-top:4px"></div>
+      </div>
+    </div>
+
     <div class="form-row">
       <div class="form-group">
         <label class="form-label">Nome Completo *</label>
@@ -1447,6 +1528,7 @@ const mapJovem = r => ({
   departamento: r.departamento, lider: r.lider, status: r.status,
   entrada: r.entrada, batizado: r.batizado, dataBatismo: r.data_batismo,
   dataNasc: r.data_nasc, obs: r.obs,
+  foto_path: r.foto_path || '', foto_url: r.foto_url || '',
 });
 
 const mapFreq = r => ({
@@ -2241,7 +2323,7 @@ function renderAniversarios() {
     const selecionado = anivSelecionado===x.id && anivSelecionadoTipo===x._tipo;
     return `
       <div class="aniv-card" onclick="selecionarAniversariante(${x.id},'${x._tipo}')" style="cursor:pointer;${selecionado?'border-color:rgba(59,130,246,0.5);background:rgba(59,130,246,0.05)':''}">
-        <div class="aniv-avatar" style="background:${cor};color:#fff">${x.nome.charAt(0)}</div>
+        <div class="aniv-avatar" style="background:${cor};color:#fff;overflow:hidden;padding:0">${x.foto_url?`<img src="${x.foto_url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%" onerror="this.parentNode.innerHTML=x.nome.charAt(0)">`:`${x.nome.charAt(0)}`}</div>
         <div class="aniv-info">
           <div class="aniv-nome">${x.nome}${x._tipo==='lider'?` <span style="font-size:10px;padding:2px 7px;background:rgba(245,158,11,0.15);color:var(--yellow);border-radius:20px;font-weight:700">LÍDER</span>`:''}</div>
           <div class="aniv-data">📅 ${dataStr} · ${sub}</div>
@@ -2672,7 +2754,15 @@ function renderJovensTable(lista) {
   if(!el) return;
   el.innerHTML=lista.length
     ? lista.map(j=>`<tr>
-        <td><strong>${j.nome}</strong>${j.instagram?`<div style="font-size:11px;color:var(--text3)">${j.instagram}</div>`:''}</td>
+        <td>
+          <div style="display:flex;align-items:center;gap:10px">
+            ${avatarHtml(j,38)}
+            <div>
+              <strong>${j.nome}</strong>
+              ${j.instagram?`<div style="font-size:11px;color:var(--text3)">${j.instagram}</div>`:''}
+            </div>
+          </div>
+        </td>
         <td style="text-align:center">${j.idade||'—'}</td>
         <td style="color:var(--red)">${j.contato}</td>
         <td style="font-size:12px;color:var(--text3);max-width:160px">${j.endereco||'—'}</td>
@@ -2739,7 +2829,12 @@ function renderFrequencia() {
     const faltas=getFaltasSeguidas(j.id);
     const ultima=frequencias.filter(f=>f.jovemId===j.id).sort((a,b)=>b.data.localeCompare(a.data))[0];
     return `<tr>
-      <td><strong>${j.nome}</strong></td>
+      <td>
+        <div style="display:flex;align-items:center;gap:9px">
+          ${avatarHtml(j,32)}
+          <strong>${j.nome}</strong>
+        </div>
+      </td>
       <td>${deptosBadges(j.departamento)||'<span style="color:var(--text3)">—</span>'}</td>
       <td>
         <div style="display:flex;align-items:center;gap:10px">
@@ -2772,7 +2867,12 @@ function renderRecuperacao() {
     ? recuperacoes.map(r=>{
         const j=jovens.find(x=>x.id===r.jovemId);
         return `<tr>
-          <td><strong>${j?.nome||'—'}</strong></td>
+          <td>
+            <div style="display:flex;align-items:center;gap:9px">
+              ${j ? avatarHtml(j,32) : ''}
+              <strong>${j?.nome||'—'}</strong>
+            </div>
+          </td>
           <td>${getStatusBadge(j?.status||'—')}</td>
           <td style="font-size:12px">${r.responsavel}</td>
           <td><span class="badge ${r.etapa.includes('Recuperado')?'badge-ativo':'badge-oscilando'}">${r.etapa}</span></td>
@@ -2871,7 +2971,7 @@ function renderDeptoCards() {
                 const statusCor = j.status==='Ativo'?'var(--green)':j.status==='Oscilando'?'var(--yellow)':j.status==='Em Risco'?'var(--red)':'var(--orange)';
                 return `
                   <div class="depto-jovem-pill">
-                    <div class="depto-jovem-avatar" style="background:${cor};color:#fff">${ini}</div>
+                    <div class="depto-jovem-avatar" style="background:${cor};color:#fff;overflow:hidden;padding:0">${j.foto_url?`<img src="${j.foto_url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%" onerror="this.parentNode.innerHTML=ini">`:`${ini}`}</div>
                     <div class="depto-jovem-info">
                       <div class="depto-jovem-nome">${j.nome}</div>
                       <div class="depto-jovem-sub" style="color:${statusCor}">${j.status} · ${freq}% freq.</div>
@@ -2913,7 +3013,7 @@ function renderDeptoCards() {
               const statusCor = j.status==='Ativo'?'var(--green)':j.status==='Oscilando'?'var(--yellow)':j.status==='Em Risco'?'var(--red)':'var(--orange)';
               return `
                 <div class="depto-jovem-pill">
-                  <div class="depto-jovem-avatar" style="background:${cor};color:#fff">${j.nome.charAt(0)}</div>
+                  <div class="depto-jovem-avatar" style="background:${cor};color:#fff;overflow:hidden;padding:0">${j.foto_url?`<img src="${j.foto_url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%" onerror="this.parentNode.innerHTML=j.nome.charAt(0)">`:`${j.nome.charAt(0)}`}</div>
                   <div class="depto-jovem-info">
                     <div class="depto-jovem-nome">${j.nome}</div>
                     <div class="depto-jovem-sub" style="color:${statusCor}">${j.status}</div>
@@ -3084,6 +3184,17 @@ async function saveJovem() {
   else { val.id=String(Date.now()); jovens.push(val); }
   try {
     await upsertJovem(val);
+    // Upload da foto (se houver arquivo selecionado)
+    if (_fotoArquivo) {
+      const fotos = await uploadFotoJovem(String(val.id));
+      if (fotos) {
+        val.foto_path = fotos.foto_path;
+        val.foto_url  = fotos.foto_url;
+        await sb.from('ruja_jovens').update({ foto_path: fotos.foto_path, foto_url: fotos.foto_url }).eq('id', String(val.id));
+        const idx2 = jovens.findIndex(x => String(x.id) === String(val.id));
+        if (idx2 !== -1) { jovens[idx2].foto_path = fotos.foto_path; jovens[idx2].foto_url = fotos.foto_url; }
+      }
+    }
     await saveData();
     closeModal('modalJovem'); showToast('Jovem salvo!'); renderJovens();
   } catch(e) { showToast('Erro ao salvar: '+e.message); console.error(e); }
@@ -3706,6 +3817,292 @@ function deleteLider(id) {
     if(currentPage==='departamentos') renderDepartamentos();
   } catch(e) { showToast('Erro ao excluir líder: '+e.message); }
 }
+
+// ═══════════════════════════════════════════════════════════════
+// FOTOS — SUPABASE STORAGE
+// Bucket: ruja-jovens-fotos (privado)
+// Caminho: jovens/{jovem_id}/perfil.webp
+// ═══════════════════════════════════════════════════════════════
+
+const FOTO_BUCKET   = 'ruja-jovens-fotos';
+const FOTO_MAX_MB   = 2;
+const FOTO_TIPOS    = ['image/jpeg','image/jpg','image/png','image/webp'];
+let   _fotoArquivo  = null; // File selecionado, aguardando upload
+let   _fotoEditId   = null; // ID do jovem em edição (null = novo)
+
+// ─── HELPER: gera HTML de avatar ───────────────────────────────
+function avatarHtml(j, size=38) {
+  const cor = getAvatarColor(j.nome);
+  const ini = (j.nome||'?').charAt(0).toUpperCase();
+  const s   = `width:${size}px;height:${size}px`;
+  if (j.foto_url) {
+    return `<div class="jovem-avatar" style="${s};background:${cor}" data-id="${j.id}">
+      <img src="${j.foto_url}" alt="${j.nome}" style="width:100%;height:100%;object-fit:cover;border-radius:50%"
+        onerror="this.parentNode.innerHTML='${ini}';this.parentNode.style.background='${cor}'">
+    </div>`;
+  }
+  return `<div class="jovem-avatar" style="${s};background:${cor}" data-id="${j.id}">${ini}</div>`;
+}
+
+// ─── Abre modal de jovem + reseta campo foto ───────────────────
+const _origOpenModalJovem = window.novoJovem || function(){};
+
+function _resetFotoModal(jovem) {
+  _fotoArquivo = null;
+  _fotoEditId  = jovem ? String(jovem.id) : null;
+
+  const preview  = document.getElementById('fotoPreview');
+  const inicial  = document.getElementById('fotoPreviewInicial');
+  const btnRem   = document.getElementById('btnRemoverFoto');
+  const status   = document.getElementById('fotoStatus');
+  const inp      = document.getElementById('jFotoInput');
+
+  if (inp) inp.value = '';
+  if (status) status.textContent = '';
+
+  if (jovem && jovem.foto_url) {
+    // Tem foto: mostra preview
+    if (preview) {
+      preview.innerHTML = `<img src="${jovem.foto_url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%" onerror="this.parentNode.innerHTML='${(jovem.nome||'?').charAt(0).toUpperCase()}'">`;
+    }
+    if (btnRem) btnRem.style.display = 'inline-flex';
+  } else {
+    // Sem foto: mostra inicial do nome ou '?'
+    const nome = jovem ? jovem.nome : '';
+    if (preview) preview.innerHTML = `<span id="fotoPreviewInicial">${nome ? nome.charAt(0).toUpperCase() : '?'}</span>`;
+    if (btnRem) btnRem.style.display = 'none';
+  }
+}
+
+// Hook na abertura do modal — chamado por editJovem e novoJovem
+const _origEditJovem = window.editJovem;
+window.editJovem = function(id) {
+  if (_origEditJovem) _origEditJovem.call(this, id);
+  setTimeout(() => {
+    const j = jovens.find(x => String(x.id) === String(id));
+    _resetFotoModal(j || null);
+    // Atualiza inicial conforme nome digitado
+    const inp = document.getElementById('jNome');
+    if (inp) inp.addEventListener('input', _syncFotoInicial, { once: false });
+  }, 80);
+};
+
+function _syncFotoInicial() {
+  if (_fotoArquivo) return; // preview já tem imagem
+  const nome = document.getElementById('jNome')?.value || '';
+  const el   = document.getElementById('fotoPreviewInicial');
+  if (el) el.textContent = nome ? nome.charAt(0).toUpperCase() : '?';
+}
+
+// Chama reset quando abre modal de novo jovem
+const _origNovoJovem = window.novoJovem;
+window.novoJovem = function() {
+  if (_origNovoJovem) _origNovoJovem.call(this);
+  setTimeout(() => {
+    _resetFotoModal(null);
+    const inp = document.getElementById('jNome');
+    if (inp) inp.addEventListener('input', _syncFotoInicial);
+  }, 80);
+};
+
+// ─── Seleciona arquivo ─────────────────────────────────────────
+function onFotoSelecionada(input) {
+  const file   = input.files[0];
+  const status = document.getElementById('fotoStatus');
+  const preview= document.getElementById('fotoPreview');
+  const btnRem = document.getElementById('btnRemoverFoto');
+
+  if (!file) return;
+
+  // Validação tipo
+  if (!FOTO_TIPOS.includes(file.type)) {
+    if (status) { status.textContent = '❌ Tipo inválido. Use JPG, PNG ou WEBP.'; status.style.color = 'var(--red)'; }
+    input.value = '';
+    return;
+  }
+  // Validação tamanho
+  if (file.size > FOTO_MAX_MB * 1024 * 1024) {
+    if (status) { status.textContent = `❌ Máximo ${FOTO_MAX_MB}MB.`; status.style.color = 'var(--red)'; }
+    input.value = '';
+    return;
+  }
+
+  _fotoArquivo = file;
+  if (status) { status.textContent = `✅ ${file.name} (${(file.size/1024).toFixed(0)}KB)`; status.style.color = 'var(--green)'; }
+  if (btnRem) btnRem.style.display = 'inline-flex';
+
+  // Preview local (não vai para o banco ainda)
+  const reader = new FileReader();
+  reader.onload = e => {
+    if (preview) preview.innerHTML = `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+  };
+  reader.readAsDataURL(file);
+}
+
+// ─── Upload da foto para o Storage ────────────────────────────
+async function uploadFotoJovem(jovemId) {
+  if (!_fotoArquivo) return null; // sem arquivo novo
+
+  const preview = document.getElementById('fotoPreview');
+  if (preview) preview.classList.add('loading');
+
+  try {
+    const path = `jovens/${jovemId}/perfil.webp`;
+
+    // Remove foto antiga se existir
+    await sb.storage.from(FOTO_BUCKET).remove([path]).catch(() => {});
+
+    // Upload
+    const { data, error } = await sb.storage.from(FOTO_BUCKET).upload(path, _fotoArquivo, {
+      cacheControl: '3600',
+      upsert: true,
+      contentType: _fotoArquivo.type,
+    });
+    if (error) throw error;
+
+    // Gera signed URL (válida 1 ano)
+    const { data: urlData, error: urlErr } = await sb.storage
+      .from(FOTO_BUCKET)
+      .createSignedUrl(path, 60 * 60 * 24 * 365);
+    if (urlErr) throw urlErr;
+
+    // Audit log
+    _auditFoto('upload_foto_jovem', jovemId, { path, tamanho: _fotoArquivo.size });
+
+    _fotoArquivo = null;
+    return { foto_path: path, foto_url: urlData.signedUrl };
+
+  } catch(e) {
+    console.error('Erro upload foto:', e);
+    const status = document.getElementById('fotoStatus');
+    if (status) { status.textContent = '❌ Erro no upload: ' + e.message; status.style.color='var(--red)'; }
+    return null;
+  } finally {
+    if (preview) preview.classList.remove('loading');
+  }
+}
+
+// ─── Remove foto do jovem ─────────────────────────────────────
+async function removerFotoJovem() {
+  const preview = document.getElementById('fotoPreview');
+  const btnRem  = document.getElementById('btnRemoverFoto');
+  const status  = document.getElementById('fotoStatus');
+  const inp     = document.getElementById('jFotoInput');
+
+  // Se arquivo novo ainda não foi salvo — só limpa o preview
+  if (_fotoArquivo) {
+    _fotoArquivo = null;
+    if (inp) inp.value = '';
+    if (status) { status.textContent = 'Foto removida.'; status.style.color='var(--text3)'; }
+    if (btnRem) btnRem.style.display = 'none';
+    const nomeEl = document.getElementById('jNome');
+    const ini = nomeEl?.value ? nomeEl.value.charAt(0).toUpperCase() : '?';
+    if (preview) preview.innerHTML = `<span id="fotoPreviewInicial">${ini}</span>`;
+    return;
+  }
+
+  // Se jovem já tem foto salva
+  if (!_fotoEditId) return;
+  const j = jovens.find(x => String(x.id) === _fotoEditId);
+  if (!j || !j.foto_path) return;
+
+  if (!confirm('Remover a foto deste jovem?')) return;
+
+  try {
+    await sb.storage.from(FOTO_BUCKET).remove([j.foto_path]);
+    const { error } = await sb.from('ruja_jovens').update({ foto_path: '', foto_url: '' }).eq('id', _fotoEditId);
+    if (error) throw error;
+
+    // Atualiza in-memory
+    const idx = jovens.findIndex(x => String(x.id) === _fotoEditId);
+    if (idx !== -1) { jovens[idx].foto_path = ''; jovens[idx].foto_url = ''; }
+
+    _auditFoto('remocao_foto_jovem', _fotoEditId, {});
+
+    const ini = j.nome ? j.nome.charAt(0).toUpperCase() : '?';
+    if (preview) preview.innerHTML = `<span id="fotoPreviewInicial">${ini}</span>`;
+    if (btnRem) btnRem.style.display = 'none';
+    if (status) { status.textContent = 'Foto removida.'; status.style.color='var(--text3)'; }
+    showToast('Foto removida.');
+
+  } catch(e) {
+    showToast('Erro ao remover foto: ' + e.message);
+  }
+}
+
+// ─── Renova signed URLs expiradas em batch ────────────────────
+async function renovarSignedUrls() {
+  const semUrl = jovens.filter(j => j.foto_path && !j.foto_url);
+  if (!semUrl.length) return;
+
+  for (const j of semUrl) {
+    try {
+      const { data } = await sb.storage.from(FOTO_BUCKET)
+        .createSignedUrl(j.foto_path, 60 * 60 * 24 * 365);
+      if (data?.signedUrl) {
+        j.foto_url = data.signedUrl;
+        await sb.from('ruja_jovens').update({ foto_url: data.signedUrl }).eq('id', String(j.id));
+      }
+    } catch(_) {}
+  }
+}
+
+// ─── Audit log de foto ────────────────────────────────────────
+async function _auditFoto(acao, jovemId, detalhes) {
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    await sb.from('ruja_audit_logs').insert({
+      usuario_id:  session?.user?.id || null,
+      acao,
+      tabela:      'ruja_jovens',
+      registro_id: String(jovemId),
+      dados_depois: detalhes,
+    });
+  } catch(_) {}
+}
+
+// ─── Hook no saveJovem para fazer upload APÓS salvar ──────────
+// Substituído diretamente na função saveJovem — ver abaixo
+// (o saveJovem original chama _uploadFotoAposSalvar)
+
+async function _uploadFotoAposSalvar(jovemId) {
+  if (!_fotoArquivo) return; // nada a fazer
+  const fotos = await uploadFotoJovem(jovemId);
+  if (!fotos) return;
+
+  // Salva no Supabase
+  await sb.from('ruja_jovens').update({
+    foto_path: fotos.foto_path,
+    foto_url:  fotos.foto_url,
+  }).eq('id', String(jovemId));
+
+  // Atualiza in-memory
+  const idx = jovens.findIndex(x => String(x.id) === String(jovemId));
+  if (idx !== -1) {
+    jovens[idx].foto_path = fotos.foto_path;
+    jovens[idx].foto_url  = fotos.foto_url;
+  }
+
+  // Audit
+  const acao = jovens[idx]?.foto_path ? 'troca_foto_jovem' : 'upload_foto_jovem';
+  _auditFoto(acao, jovemId, { path: fotos.foto_path });
+}
+
+// Roda renovação ao carregar
+document.addEventListener('DOMContentLoaded', () => {
+  setTimeout(renovarSignedUrls, 3000);
+});
+
+// ─── SQL que precisa ser rodado no Supabase ────────────────────
+// ALTER TABLE ruja_jovens ADD COLUMN IF NOT EXISTS foto_path TEXT DEFAULT '';
+// ALTER TABLE ruja_jovens ADD COLUMN IF NOT EXISTS foto_url  TEXT DEFAULT '';
+//
+// -- Bucket (via Dashboard Storage ou SQL):
+// -- INSERT INTO storage.buckets (id, name, public) VALUES ('ruja-jovens-fotos', 'ruja-jovens-fotos', false);
+// -- CREATE POLICY "auth_read"   ON storage.objects FOR SELECT TO authenticated USING (bucket_id='ruja-jovens-fotos');
+// -- CREATE POLICY "auth_insert" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id='ruja-jovens-fotos');
+// -- CREATE POLICY "auth_update" ON storage.objects FOR UPDATE TO authenticated USING (bucket_id='ruja-jovens-fotos');
+// -- CREATE POLICY "auth_delete" ON storage.objects FOR DELETE TO authenticated USING (bucket_id='ruja-jovens-fotos');
 </script>
 </body>
 </html>
