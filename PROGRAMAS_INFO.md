@@ -200,3 +200,32 @@ ruja-nextjs/
 | FASE 4 | Dashboard + Metas + Aniversários | ✅ Concluída |
 | FASE 5 | Configurações + CSV + GAS | ✅ Concluída |
 | FASE 6 | Auditoria + Deploy | ✅ Concluída |
+
+
+---
+
+## Regra de Identidade Visual (OBRIGATÓRIA)
+
+**Toda reestruturação ou migração Next.js DEVE preservar:**
+
+### Tailwind Version
+O projeto `ruja-nextjs` usa **Tailwind CSS v4** com `@tailwindcss/postcss v4`.
+
+**⚠️ ATENÇÃO:** A sintaxe do v4 é diferente do v3:
+- ❌ v3 (errado): `@tailwind base; @tailwind components; @tailwind utilities;`
+- ✅ v4 (correto): `@import "tailwindcss";`
+
+### Cores obrigatórias RUJA
+```css
+--color-red-500: #D42B2B;  /* Vermelho RUJA principal */
+--color-red-600: #D42B2B;  /* Botões */
+--color-red-700: #A81E1E;  /* Hover */
+```
+
+### Identidade visual
+- Fundo: `#0A0A0A` (body), `#111111` (cards), `#161616` (card2)
+- Texto: `#F5F5F5` (principal), `#AAAAAA` (secundário)
+- Borda: `rgba(255,255,255,0.07)`
+- Vermelho RUJA: `#D42B2B`
+- Inputs: fundo escuro, borda sutil, focus vermelho
+- Botões: vermelho sólido, uppercase, arredondados
