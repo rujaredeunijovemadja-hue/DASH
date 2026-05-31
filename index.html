@@ -1677,7 +1677,7 @@ td.mono { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight
 // ─── SUPABASE CLIENT ───────────────────────────────────────────
 const _SB_URL = 'https://wjdnemfifgquuonwwaua.supabase.co';
 const _SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndqZG5lbWZpZmdxdXVvbnd3YXVhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3MDM4MzEsImV4cCI6MjA5NDI3OTgzMX0.Mx91ps-Rd1h0Van-xwWiRkSqVcXHVlssFNB-pZrlUHI';
-const AUTH_DEBUG = true;
+const AUTH_DEBUG = false; // perf: desabilitado em produção
 
 function logAuthDebug(step, payload) {
   if(!AUTH_DEBUG) return;
@@ -2944,7 +2944,7 @@ async function doLogin() {
 
   ocultarErroLogin();
   logAuthDebug('Entrada na funcao doLogin');
-  logAuthDebug('Email lido', email);
+  logAuthDebug('Email preenchido', Boolean(email));
 
   // Validate fields
   if(!email && !password) {
@@ -2974,7 +2974,7 @@ async function doLogin() {
 
   let data, error;
   try {
-    logAuthDebug('Chamando signInWithPassword', { email });
+    logAuthDebug('Chamando signInWithPassword');
     const result = await sb.auth.signInWithPassword({ email, password });
     data  = result.data;
     error = result.error;
@@ -2982,7 +2982,7 @@ async function doLogin() {
   } catch(e) {
     btn.textContent = '🦁 Entrar no Painel';
     btn.disabled    = false;
-    console.error('[RUJA Auth] Excecao no signInWithPassword:', e);
+    console.error('[RUJA Auth] Excecao no signInWithPassword:', e.message);
     mostrarErroLogin('Falha de conexão. Verifique sua internet.');
     return;
   }
@@ -2990,7 +2990,7 @@ async function doLogin() {
   if(error) {
     btn.textContent = '🦁 Entrar no Painel';
     btn.disabled    = false;
-    console.error('[RUJA Auth] Erro Auth:', error);
+    console.error('[RUJA Auth] Erro Auth:', error.message);
     mostrarErroLogin(_traduzirErroAuth(error.message));
     return;
   }
