@@ -5303,7 +5303,6 @@ async function syncManual() {
   catch (e) { console.error(e); showSyncBadge('error'); showToast('Erro na migração: ' + e.message); throw e; }
 }
 
-async 
 // B3-fix: salvar GAS URL pelo usuário
 async function salvarGasUrl() {
   const inp = document.getElementById('gasUrlInput');
@@ -5324,7 +5323,7 @@ async function salvarGasUrl() {
   }
 }
 
-function pullFromSheets(force) {
+async function pullFromSheets(force) {
   // M6-fix: confirmação antes de reimportar — evita sobrescrita acidental
   if (force) {
     const ok = window.confirm(
