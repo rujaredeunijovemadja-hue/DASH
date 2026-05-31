@@ -3953,7 +3953,7 @@ function openModalFreqNovo() {
   document.getElementById('modalFreq').classList.add('open');
 }
 
-function saveFreq() {
+async function saveFreq() {
   const data = document.getElementById('fData').value;
   if(!data) return alert('Informe a data.');
 
@@ -4648,7 +4648,7 @@ function removerFotoLiderSupremo() {
   if (status)  status.textContent = '';
 }
 
-function removerFotoJovem() {
+async function removerFotoJovem() {
   const preview = document.getElementById('fotoPreview');
   const btnRem  = document.getElementById('btnRemoverFoto');
   const status  = document.getElementById('fotoStatus');
