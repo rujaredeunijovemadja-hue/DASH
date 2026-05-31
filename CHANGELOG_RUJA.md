@@ -217,3 +217,47 @@ antes de processar o toque.
 - `ruja_bugfix_patch.js` → marcado como OBSOLETO (integrado ao index.html)
 - `ruja_crud_patch.js` → marcado como OBSOLETO (integrado ao index.html)
 - Arquivos mantidos no repo para histórico git
+
+---
+
+## [2026-05-31] — FASE 1: Migração para Next.js + TypeScript
+
+**Início da reestruturação arquitetural completa.**
+
+Novo repositório: https://github.com/rujaredeunijovemadja-hue/ruja-nextjs
+
+### Criado (ruja-nextjs)
+
+**Autenticação:**
+- `src/app/login/page.tsx` — login React mobile-first, sem DOMContentLoaded
+- `src/middleware.ts` — proteção de rotas server-side
+- `src/lib/ruja/auth.ts` — signIn, signOut, resetPassword, translateAuthError
+
+**Layout:**
+- `src/components/ruja/layout/ruja-layout.tsx` — layout com dynamic imports por módulo
+- `src/components/ruja/layout/ruja-sidebar.tsx` — sidebar desktop
+- `src/components/ruja/layout/ruja-mobile-nav.tsx` — bottom nav + drawer mobile
+
+**Base de dados:**
+- `src/lib/supabase/client.ts` — createBrowserClient (@supabase/ssr)
+- `src/lib/supabase/server.ts` — createServerClient (SSR)
+- `src/lib/ruja/types.ts` — todos os tipos centralizados (Jovem, Lider, etc.)
+- `src/lib/ruja/queries.ts` — todas as queries Supabase centralizadas
+- `src/lib/ruja/calculos.ts` — getDiasParaAniversario, calcularStatus, getFreqPct, etc.
+- `src/lib/ruja/context.tsx` — contexto global substitui data store in-memory
+- `src/lib/ruja/storage.ts` — uploadFoto, removeFoto, renovarSignedUrl
+- `src/lib/ruja/csv.ts` — exportToCSV, importFromCSV
+
+**UI:**
+- `src/components/ui/badge.tsx` — StatusBadge
+- `src/components/ui/spinner.tsx` — Spinner, LoadingScreen
+- `src/components/ui/toast.tsx` — Toast
+
+**Build:** ✅ TypeScript sem erros | Next.js 16.2.6 | Build OK
+
+### Próximas fases
+- FASE 2: Jovens + Fotos + Departamentos
+- FASE 3: Frequência + Status Automático + Recuperação
+- FASE 4: Dashboard + Metas + Aniversários
+- FASE 5: Configurações + CSV + Migração GAS
+- FASE 6: Auditoria + Deploy Vercel
