@@ -108,3 +108,43 @@ Formato: `[DATA] TIPO: Descrição — Arquivo(s) — Commit`
 
 *Formato: [DATA] TIPO(módulo): descrição*
 *Tipos: feat | fix | refactor | docs | security | perf*
+
+---
+
+## [2026-05-30] — Fix Login Mobile
+
+### Bug Crítico: Login não funciona em dispositivos móveis
+
+**Causas raiz identificadas (3):**
+
+**CAUSA 1 — `login-bg` sem `pointer-events:none`** *(Principal)*
+O `<div class="login-bg">` é `position:absolute; inset:0` e cobre toda a tela de login sem `pointer-events:none`. No desktop o mouse passa direto. Em mobile, o evento de toque fica capturado pela camada de background — o botão "Entrar" recebe o evento visualmente mas nunca dispara o listener de click.
+- Fix: `pointer-events:none` adicionado ao `.login-bg`
+
+**CAUSA 2 — Sem `touch-action:manipulation` no botão**
+Browsers móveis aplicam delay de ~300ms no evento `click` para detectar double-tap (zoom). Sem `touch-action:manipulation`, o usuário toca, aguarda o delay, e pode soltar o dedo fora do botão — o click nunca dispara.
+- Fix: `touch-action:manipulation` + `min-height:52px` no `.login-btn`
+
+**CAUSA 3 — Viewport iOS com 100vh incorreto**
+No Safari iOS, `100vh` inclui a barra de endereço, causando corte da tela de login em telas pequenas. O botão ficava parcialmente fora da área visível e de toque.
+- Fix: `-webkit-fill-available` + `env(safe-area-inset-*)` no `.login-page`
+
+**Correções adicionais:**
+
+- `touchend` listener adicionado ao `loginBtn` e `forgotPasswordBtn` (elimina delay residual em Android antigo)
+- `autocorrect="off"`, `autocapitalize="none"`, `inputmode="email"` no campo de email (evita correção automática do teclado mobile que sobrescreve o email)
+- Media queries para 480px e `max-height:600px` (teclado virtual aberto)
+- `box-sizing:border-box` no login-card
+
+**Navegadores cobertos pelos fixes:**
+- ✅ Android Chrome (touch-action + touchend)
+- ✅ Android Samsung Internet (touch-action + pointer-events)
+- ✅ Android Brave (touch-action + pointer-events)
+- ✅ iPhone Safari (fill-available + safe-area + pointer-events)
+- ✅ iPhone Chrome (touch-action + safe-area)
+
+**Validação Pós-Deploy Fase 1:** 13/13 OK (análise estática)
+
+**Arquivo:** `index.html` | Commit: pendente
+
+---
