@@ -261,3 +261,61 @@ Novo repositório: https://github.com/rujaredeunijovemadja-hue/ruja-nextjs
 - FASE 4: Dashboard + Metas + Aniversários
 - FASE 5: Configurações + CSV + Migração GAS
 - FASE 6: Auditoria + Deploy Vercel
+
+---
+
+## [2026-05-31] — FASE 2-5: Todos os módulos migrados para Next.js
+
+**Repositório:** https://github.com/rujaredeunijovemadja-hue/ruja-nextjs
+**Commit:** d069d46
+
+### FASE 2 — Jovens + Fotos + Departamentos + Líderes
+
+**Criado:**
+- `ruja-jovens.tsx` — listagem com busca, filtros de status e departamento, cards mobile
+- `ruja-jovem-form.tsx` — formulário completo com upload de foto via Supabase Storage
+- `ruja-departamentos.tsx` — CRUD + KPIs de membros e ativos por departamento
+- `ruja-lideres.tsx` — CRUD + sincronização automática de jovens ao excluir líder
+
+**Bugs do index.html corrigidos estruturalmente:**
+- Sem funções duplicadas (cada módulo é um componente único)
+- Tipo normalizado automaticamente via TypeScript
+- Upload de foto com async/await correto
+- deleteLider com sincronização de jovens garantida
+
+### FASE 3 — Frequência + Status automático + Recuperação
+
+**Criado:**
+- `ruja-frequencia.tsx` — marcar presença em lote por departamento, recálculo de status automático após salvar
+- `ruja-recuperacao.tsx` — planos ativos/concluídos, alerta de jovens em risco sem plano, WhatsApp direto
+
+**Melhorias:**
+- recalcularStatus() chamado após cada lote de frequência
+- Alerta visual de jovens Em Risco sem plano de recuperação
+
+### FASE 4 — Dashboard + Metas + Aniversários
+
+**Criado:**
+- `ruja-dashboard.tsx` — KPIs reais do Supabase, barras de progresso das metas, breakdown de status, histórico mensal
+- `ruja-metas.tsx` — configurar metas e regras com sanitização (nunca aceita timestamp como meta)
+- `ruja-aniversarios.tsx` — tabs hoje/mês/30dias/todos, cálculo correto com zeragem de horas, WhatsApp direto
+
+### FASE 5 — Configurações + CSV
+
+**Criado:**
+- `ruja-config.tsx` — exportar/importar CSV por tabela, GAS URL configurável, alterar senha, dados do sistema
+
+### Estado das fases
+| Fase | Status |
+|------|--------|
+| FASE 1 | ✅ Concluída |
+| FASE 2 | ✅ Concluída |
+| FASE 3 | ✅ Concluída |
+| FASE 4 | ✅ Concluída |
+| FASE 5 | ✅ Concluída |
+| FASE 6 | ✅ Documentação atualizada |
+
+### Build final
+- TypeScript: ✅ zero erros
+- Next.js 16: ✅ build limpo
+- Rotas: `/login` (estática) + `/ruja` (dinâmica protegida)
