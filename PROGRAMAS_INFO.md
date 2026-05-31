@@ -152,3 +152,51 @@ Browser
 | RLS sem isolamento por papel | Médio | Aberto — aceitável para uso interno |
 | localStorage com dados pessoais | Baixo | Aberto — cache apenas, dados no Supabase |
 | ruja_audit_logs cobertura parcial | Baixo | Parcialmente resolvido — B5 expandiu |
+
+
+---
+
+## Nova Arquitetura (em migração)
+
+**Repositório novo:** https://github.com/rujaredeunijovemadja-hue/ruja-nextjs
+**Stack:** Next.js 16 + React 19 + TypeScript + Tailwind + Supabase SSR
+**Deploy:** Vercel (a configurar)
+
+### Estrutura nova
+
+```
+ruja-nextjs/
+├── src/
+│   ├── app/
+│   │   ├── login/page.tsx      ← Autenticação React
+│   │   └── ruja/page.tsx       ← App principal (auth server-side)
+│   ├── components/ruja/
+│   │   ├── layout/             ← Sidebar + MobileNav + Layout
+│   │   ├── dashboard/          ← FASE 4
+│   │   ├── jovens/             ← FASE 2
+│   │   ├── frequencia/         ← FASE 3
+│   │   ├── recuperacao/        ← FASE 3
+│   │   ├── departamentos/      ← FASE 2
+│   │   ├── lideres/            ← FASE 2
+│   │   ├── metas/              ← FASE 4
+│   │   ├── aniversarios/       ← FASE 4
+│   │   └── config/             ← FASE 5
+│   └── lib/ruja/
+│       ├── types.ts            ← Tipos TypeScript centralizados
+│       ├── queries.ts          ← Queries Supabase centralizadas
+│       ├── calculos.ts         ← Lógica de negócio centralizada
+│       ├── auth.ts             ← Autenticação
+│       ├── storage.ts          ← Upload de fotos
+│       ├── csv.ts              ← Importação/Exportação
+│       └── context.tsx         ← Estado global
+```
+
+### Status das Fases
+| Fase | Descrição | Status |
+|------|-----------|--------|
+| FASE 1 | Autenticação + Layout + Base | ✅ Concluída |
+| FASE 2 | Jovens + Fotos + Departamentos | 🔄 Próxima |
+| FASE 3 | Frequência + Status + Recuperação | ⏳ Aguardando |
+| FASE 4 | Dashboard + Metas + Aniversários | ⏳ Aguardando |
+| FASE 5 | Configurações + CSV + GAS | ⏳ Aguardando |
+| FASE 6 | Auditoria + Deploy | ⏳ Aguardando |
