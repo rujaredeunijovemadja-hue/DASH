@@ -721,8 +721,8 @@ td.mono { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight
     <button class="bnav-item" data-page="frequencia" onclick="bnavGo('frequencia',this)">
       <span class="bnav-icon">✅</span>Freq.
     </button>
-    <button class="bnav-item" data-page="recuperacao" onclick="bnavGo('recuperacao',this)">
-      <span class="bnav-icon">🚑</span>Recup.
+    <button class="bnav-item" data-page="aniversarios" onclick="bnavGo('aniversarios',this)">
+      <span class="bnav-icon">🎂</span>Aniv.
     </button>
     <button class="bnav-item bnav-more" onclick="openMobileMenu()">
       <span class="bnav-icon">☰</span>Mais
@@ -1140,8 +1140,15 @@ td.mono { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight
             <span class="card-title">☁️ Sincronização Google Sheets</span>
             <span id="syncBadge" style="font-size:12px;font-weight:600;color:#6B7280">📴 Não configurado</span>
           </div>
-          <div style="font-size:12px;color:var(--text2);margin-bottom:14px">
-            A URL de sincronização é carregada automaticamente. Nenhuma configuração necessária.
+          <div style="font-size:12px;color:var(--text2);margin-bottom:10px">
+            Configure a URL do Google Apps Script para importação manual de dados.
+          </div>
+          <div style="display:flex;gap:8px;margin-bottom:14px;align-items:center">
+            <input type="url" id="gasUrlInput" class="form-input"
+                   placeholder="https://script.google.com/macros/s/..."
+                   style="flex:1;font-size:12px"
+                   autocorrect="off" autocapitalize="none" spellcheck="false">
+            <button class="btn btn-ghost btn-sm" onclick="salvarGasUrl()" style="white-space:nowrap">💾 Salvar URL</button>
           </div>
           <div style="display:flex;gap:10px;margin-top:4px">
             <button class="btn btn-ghost btn-sm" onclick="pullFromSheets(false).then(()=>{renderAll();showToast('Dados atualizados!')})">⬇️ Puxar agora</button>
@@ -3832,6 +3839,7 @@ async function saveRegras() {
   localStorage.setItem('regras', JSON.stringify(regras)); // cache local
   try {
     await salvarConfig('regras', regras); // ← persiste no Supabase
+    _auditLog('update_config', 'ruja_configuracoes', 'regras', null, regras); // B5-fix
     showToast('Regras salvas!');
     console.log('[saveRegras] ✅ salvo no Supabase:', regras);
   } catch(e) {
@@ -3902,6 +3910,8 @@ function editJovem(id) {
 }
 async function deleteJovemUI(id) {
   if(!confirm('Excluir este jovem?')) return;
+  const _jAudit = jovens.find(x => String(x.id) === String(id));
+  _auditLog('delete_jovem', 'ruja_jovens', id, _jAudit); // B5-fix
   try {
     const { error } = await sb.from('ruja_jovens').delete().eq('id', String(id));
     if(error) throw error;
@@ -4485,6 +4495,7 @@ async function deleteLider(id) {
   const l = lideres.find(x=>x.id===id);
   if(!l) return;
   if(!confirm(`Excluir o líder "${l.nome}"?\n\nOs jovens do departamento "${l.departamento||'—'}" terão o campo Líder limpo.`)) return;
+  _auditLog('delete_lider', 'ruja_lideres', sid, l); // B5-fix
 
   // Remove o líder dos jovens antes de excluir
   if(l.departamento) sincronizarLiderNosJovens(l.departamento, '', l.nome);
@@ -4758,6 +4769,22 @@ async function renovarSignedUrls() {
 }
 
 // ─── Audit log de foto ────────────────────────────────────────
+
+// ─── B5-fix: Audit log expandido para operações críticas ──────
+async function _auditLog(acao, tabela, registroId, dadosAntes = null, dadosDepois = null) {
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    await sb.from('ruja_audit_logs').insert({
+      usuario_id:   session?.user?.id || null,
+      acao,
+      tabela,
+      registro_id:  String(registroId),
+      dados_antes:  dadosAntes,
+      dados_depois: dadosDepois,
+    });
+  } catch(_) {} // silencioso — não interrompe fluxo principal
+}
+
 async function _auditFoto(acao, jovemId, detalhes) {
   try {
     const { data: { session } } = await sb.auth.getSession();
@@ -4846,15 +4873,37 @@ function bnavGo(page, el) {
 
 // ─── "Mais" menu ─────────────────────────────────────────────
 function openMobileMenu() {
-  openBs('Menu', [
-    { icon:'🏠', label:'Dashboard',    action:"bnavGoFromBs('dashboard')" },
-    { icon:'📅', label:'Aniversários', action:"bnavGoFromBs('aniversarios')" },
-    { icon:'🎯', label:'Metas',        action:"bnavGoFromBs('metas')" },
-    { icon:'🏛️',  label:'Departamentos',action:"bnavGoFromBs('departamentos')" },
-    { icon:'👤', label:'Líderes',      action:"bnavGoFromBs('lideres')" },
-    { icon:'⚙️', label:'Configurações',action:"bnavGoFromBs('config')" },
-    { icon:'🚪', label:'Sair',         action:'doLogout()' },
-  ]);
+  // M8-fix: drawer completo com todas as páginas
+  const existing = document.getElementById('mobileMenuDrawer');
+  if (existing) { existing.remove(); }
+
+  const pages = [
+    { page:'recuperacao',    icon:'🚑', label:'Recuperação' },
+    { page:'departamentos',  icon:'🏛️', label:'Departamentos' },
+    { page:'lideres',        icon:'⭐', label:'Líderes' },
+    { page:'metas',          icon:'🎯', label:'Metas' },
+    { page:'alertas',        icon:'🚨', label:'Alertas' },
+    { page:'lidersupremo',   icon:'👑', label:'Líder Supremo' },
+    { page:'config',         icon:'⚙️', label:'Configurações' },
+  ];
+
+  const drawer = document.createElement('div');
+  drawer.id = 'mobileMenuDrawer';
+  drawer.style.cssText = `position:fixed;inset:0;z-index:9000;display:flex;flex-direction:column;justify-content:flex-end`;
+  drawer.innerHTML = `
+    <div onclick="document.getElementById('mobileMenuDrawer').remove()"
+         style="flex:1;background:rgba(0,0,0,0.5)"></div>
+    <div style="background:var(--card);border-radius:20px 20px 0 0;padding:16px 0 calc(16px + env(safe-area-inset-bottom,0px)) 0">
+      <div style="width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 16px"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:2px;padding:0 8px">
+        ${pages.map(p => `
+          <button onclick="bnavGo('${p.page}',null);document.getElementById('mobileMenuDrawer').remove()"
+                  style="background:none;border:none;padding:16px 8px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;border-radius:12px;color:var(--text1);font-size:12px;font-family:'Barlow',sans-serif;touch-action:manipulation">
+            <span style="font-size:24px">${p.icon}</span>${p.label}
+          </button>`).join('')}
+      </div>
+    </div>`;
+  document.body.appendChild(drawer);
 }
 function bnavGoFromBs(page) {
   closeBs();
@@ -5287,8 +5336,46 @@ async function syncManual() {
   catch (e) { console.error(e); showSyncBadge('error'); showToast('Erro na migração: ' + e.message); throw e; }
 }
 
-async function pullFromSheets(force) {
-  return migrarTudoParaSupabase({ incluirGAS: true, force: Boolean(force) });
+async 
+// B3-fix: salvar GAS URL pelo usuário
+async function salvarGasUrl() {
+  const inp = document.getElementById('gasUrlInput');
+  if (!inp) return;
+  const url = (inp.value || '').trim();
+  if (url && !url.startsWith('https://script.google.com')) {
+    showToast('❌ URL inválida. Use uma URL do Google Apps Script.');
+    return;
+  }
+  GAS_URL = url;
+  localStorage.setItem('gasUrl', url);
+  try {
+    // Persiste na tabela config legada para que outros dispositivos leiam
+    await sb.from('config').upsert({ chave: 'gas_url', valor: url });
+    showToast(url ? '✅ GAS URL salva!' : '✅ GAS URL removida.');
+  } catch(e) {
+    showToast('⚠️ Salvo localmente. Erro ao persistir: ' + e.message);
+  }
+}
+
+function pullFromSheets(force) {
+  // M6-fix: confirmação antes de reimportar — evita sobrescrita acidental
+  if (force) {
+    const ok = window.confirm(
+      '⚠️ Forçar pull vai SUBSTITUIR os dados locais com os do Google Sheets.\n\n' +
+      'Registros com mesmo ID serão atualizados. Continuar?'
+    );
+    if (!ok) { showToast('Operação cancelada.'); return; }
+  }
+  showToast(force ? '⚠️ Forçando pull do Sheets...' : '📥 Importando do Sheets...');
+  try {
+    await migrarTudoParaSupabase({ incluirGAS: true, force: Boolean(force) });
+    showToast('✅ Importação concluída!');
+    await carregarTodos();
+    renderAll();
+  } catch(e) {
+    showToast('❌ Erro: ' + e.message);
+    console.error('[pullFromSheets]', e);
+  }
 }
 
 async function pushToSheets() {
