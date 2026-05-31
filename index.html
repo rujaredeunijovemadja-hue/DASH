@@ -5,8 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>RUJA — Painel de Gestão</title>
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800;900&family=Barlow+Condensed:wght@700;800;900&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-<script>window.Chart||document.write('<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"><\/script>')</script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
 :root {
@@ -4873,36 +4872,58 @@ function bnavGo(page, el) {
 
 // ─── "Mais" menu ─────────────────────────────────────────────
 function openMobileMenu() {
-  // M8-fix: drawer completo com todas as páginas
-  const existing = document.getElementById('mobileMenuDrawer');
-  if (existing) { existing.remove(); }
+  var existing = document.getElementById('mobileMenuDrawer');
+  if (existing) { existing.remove(); return; }
 
-  const pages = [
-    { page:'recuperacao',    icon:'🚑', label:'Recuperação' },
-    { page:'departamentos',  icon:'🏛️', label:'Departamentos' },
-    { page:'lideres',        icon:'⭐', label:'Líderes' },
-    { page:'metas',          icon:'🎯', label:'Metas' },
-    { page:'alertas',        icon:'🚨', label:'Alertas' },
-    { page:'lidersupremo',   icon:'👑', label:'Líder Supremo' },
-    { page:'config',         icon:'⚙️', label:'Configurações' },
+  var pages = [
+    { page:'recuperacao',   icon:'🚑', label:'Recuperação' },
+    { page:'departamentos', icon:'🏛️', label:'Departamentos' },
+    { page:'lideres',       icon:'⭐', label:'Líderes' },
+    { page:'metas',         icon:'🎯', label:'Metas' },
+    { page:'alertas',       icon:'🚨', label:'Alertas' },
+    { page:'lidersupremo',  icon:'👑', label:'Líder Supremo' },
+    { page:'config',        icon:'⚙️', label:'Configurações' },
   ];
 
-  const drawer = document.createElement('div');
+  // Sem template literals aninhados — compatível com Safari iOS
+  var drawer = document.createElement('div');
   drawer.id = 'mobileMenuDrawer';
-  drawer.style.cssText = `position:fixed;inset:0;z-index:9000;display:flex;flex-direction:column;justify-content:flex-end`;
-  drawer.innerHTML = `
-    <div onclick="document.getElementById('mobileMenuDrawer').remove()"
-         style="flex:1;background:rgba(0,0,0,0.5)"></div>
-    <div style="background:var(--card);border-radius:20px 20px 0 0;padding:16px 0 calc(16px + env(safe-area-inset-bottom,0px)) 0">
-      <div style="width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 16px"></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:2px;padding:0 8px">
-        ${pages.map(p => `
-          <button onclick="bnavGo('${p.page}',null);document.getElementById('mobileMenuDrawer').remove()"
-                  style="background:none;border:none;padding:16px 8px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;border-radius:12px;color:var(--text1);font-size:12px;font-family:'Barlow',sans-serif;touch-action:manipulation">
-            <span style="font-size:24px">${p.icon}</span>${p.label}
-          </button>`).join('')}
-      </div>
-    </div>`;
+  drawer.style.cssText = 'position:fixed;inset:0;z-index:9000;display:flex;flex-direction:column;justify-content:flex-end';
+
+  var overlay = document.createElement('div');
+  overlay.style.cssText = 'flex:1;background:rgba(0,0,0,0.5)';
+  overlay.addEventListener('click', function() { drawer.remove(); });
+  overlay.addEventListener('touchend', function() { drawer.remove(); });
+  drawer.appendChild(overlay);
+
+  var sheet = document.createElement('div');
+  sheet.style.cssText = 'background:var(--card);border-radius:20px 20px 0 0;padding:16px 0 calc(16px + env(safe-area-inset-bottom,0px)) 0';
+
+  var handle = document.createElement('div');
+  handle.style.cssText = 'width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 16px';
+  sheet.appendChild(handle);
+
+  var grid = document.createElement('div');
+  grid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 1fr;gap:2px;padding:0 8px';
+
+  pages.forEach(function(p) {
+    var btn = document.createElement('button');
+    btn.style.cssText = 'background:none;border:none;padding:16px 8px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;border-radius:12px;color:var(--text1);font-size:12px;font-family:Barlow,sans-serif;touch-action:manipulation;width:100%';
+    btn.innerHTML = '<span style="font-size:24px">' + p.icon + '</span>' + p.label;
+    btn.addEventListener('click', function() {
+      drawer.remove();
+      bnavGo(p.page, null);
+    });
+    btn.addEventListener('touchend', function(e) {
+      e.preventDefault();
+      drawer.remove();
+      bnavGo(p.page, null);
+    });
+    grid.appendChild(btn);
+  });
+
+  sheet.appendChild(grid);
+  drawer.appendChild(sheet);
   document.body.appendChild(drawer);
 }
 function bnavGoFromBs(page) {
