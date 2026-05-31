@@ -195,8 +195,8 @@ ruja-nextjs/
 | Fase | Descrição | Status |
 |------|-----------|--------|
 | FASE 1 | Autenticação + Layout + Base | ✅ Concluída |
-| FASE 2 | Jovens + Fotos + Departamentos | 🔄 Próxima |
-| FASE 3 | Frequência + Status + Recuperação | ⏳ Aguardando |
-| FASE 4 | Dashboard + Metas + Aniversários | ⏳ Aguardando |
-| FASE 5 | Configurações + CSV + GAS | ⏳ Aguardando |
-| FASE 6 | Auditoria + Deploy | ⏳ Aguardando |
+| FASE 2 | Jovens + Fotos + Departamentos | ✅ Concluída |
+| FASE 3 | Frequência + Status + Recuperação | ✅ Concluída |
+| FASE 4 | Dashboard + Metas + Aniversários | ✅ Concluída |
+| FASE 5 | Configurações + CSV + GAS | ✅ Concluída |
+| FASE 6 | Auditoria + Deploy | ✅ Concluída |
