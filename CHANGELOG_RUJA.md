@@ -176,3 +176,44 @@ No Safari iOS, `100vh` inclui a barra de endereço, causando corte da tela de lo
 - Arquivo: `index.html`
 
 **Validação final: 27/27 OK**
+
+---
+
+## [2026-05-30] — Fix Performance Mobile (274ms input delay)
+
+**Problema:** Chrome DevTools mostrava 274ms de input delay em `label.form-label`
+ao toque em campos do formulário de login (e qualquer campo do sistema).
+
+**Causa raiz:** ausência de `touch-action:manipulation` nos elementos interativos.
+O browser aguardava ~300ms para descartar a possibilidade de double-tap (zoom)
+antes de processar o toque.
+
+**Correções aplicadas:**
+
+- `.form-input`, `.form-select`, `.form-textarea` → `touch-action:manipulation`
+- `.form-label` → `touch-action:manipulation` + `-webkit-tap-highlight-color:transparent`
+- `.btn` → `touch-action:manipulation`
+- `loginBtn` — simplificado de `touchstart + touchend + click` para **apenas `click`**
+  (com `touch-action:manipulation` no CSS, o delay é eliminado nativamente)
+- `forgotBtn` — idem
+- Drawer mobile — `e.preventDefault()` removido do `touchend` (desnecessário)
+
+**Resultado esperado:** input delay < 10ms (era 274ms)
+
+**Arquivo:** `index.html` | Commit: `ea891f98`
+
+---
+
+## [2026-05-30] — Security: AUTH_DEBUG desabilitado em produção
+
+- `AUTH_DEBUG = false` — 22 chamadas `logAuthDebug` silenciadas em produção
+- `console.error` de auth não expõe mais email ou objeto de erro completo
+- Arquivo: `index.html` | Commit: pendente
+
+---
+
+## [2026-05-30] — Chore: patch files marcados como obsoletos
+
+- `ruja_bugfix_patch.js` → marcado como OBSOLETO (integrado ao index.html)
+- `ruja_crud_patch.js` → marcado como OBSOLETO (integrado ao index.html)
+- Arquivos mantidos no repo para histórico git
