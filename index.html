@@ -353,15 +353,25 @@ td.mono { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight
 .config-desc { font-size:12px; color:var(--text3); margin-top:2px; }
 
 /* ─── LOGIN ─── */
-.login-page { min-height:100vh; background:var(--black); display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden; }
-.login-bg { position:absolute; inset:0; background:radial-gradient(circle at 30% 50%, rgba(212,43,43,0.08) 0%, transparent 60%), radial-gradient(circle at 80% 20%, rgba(212,43,43,0.05) 0%, transparent 40%); }
-.login-card { position:relative; z-index:1; background:var(--card); border:1px solid var(--border); border-radius:20px; padding:48px 40px; width:100%; max-width:420px; animation:slideUp 0.4s ease; }
+.login-page { min-height:100vh; min-height:-webkit-fill-available; background:var(--black); display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden; padding:env(safe-area-inset-top,0) env(safe-area-inset-right,0) env(safe-area-inset-bottom,0) env(safe-area-inset-left,0); }
+.login-bg { position:absolute; inset:0; pointer-events:none; background:radial-gradient(circle at 30% 50%, rgba(212,43,43,0.08) 0%, transparent 60%), radial-gradient(circle at 80% 20%, rgba(212,43,43,0.05) 0%, transparent 40%); }
+.login-card { position:relative; z-index:1; background:var(--card); border:1px solid var(--border); border-radius:20px; padding:40px 28px; width:100%; max-width:420px; animation:slideUp 0.4s ease; box-sizing:border-box; }
 .login-logo { text-align:center; margin-bottom:32px; }
 .lion-svg { width:72px; height:72px; margin:0 auto 16px; }
 .login-title { font-family:'Barlow Condensed',sans-serif; font-weight:900; font-size:28px; text-transform:uppercase; letter-spacing:1px; }
 .login-title span { color:var(--red); }
 .login-sub { color:var(--text3); font-size:13px; margin-top:4px; }
-.login-btn { width:100%; padding:14px; background:var(--red); color:#fff; font-size:15px; font-weight:800; border:none; border-radius:10px; cursor:pointer; font-family:'Barlow',sans-serif; text-transform:uppercase; transition:all 0.15s; margin-top:8px; }
+.login-btn { width:100%; padding:14px; background:var(--red); color:#fff; font-size:15px; font-weight:800; border:none; border-radius:10px; cursor:pointer; font-family:'Barlow',sans-serif; text-transform:uppercase; transition:all 0.15s; margin-top:8px; touch-action:manipulation; -webkit-tap-highlight-color:transparent; min-height:52px; }
+@media (max-width:480px) {
+  .login-card { padding:32px 20px; border-radius:16px; margin:12px; width:calc(100% - 24px); }
+  .login-btn  { font-size:14px; padding:16px 14px; }
+}
+@media (max-height:600px) {
+  /* Teclado virtual aberto — compacta o card */
+  .login-card { padding:24px 20px; }
+  .login-logo { margin-bottom:16px; }
+  .login-title { font-size:22px; }
+}
 .login-btn:hover { background:var(--red-light); transform:translateY(-1px); }
 
 
@@ -754,7 +764,7 @@ td.mono { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight
     </div>
     <div class="form-group">
       <label class="form-label" for="loginEmail">E-mail</label>
-      <input type="email" class="form-input" id="loginEmail" placeholder="seu@email.com" autocomplete="email">
+      <input type="email" class="form-input" id="loginEmail" placeholder="seu@email.com" autocomplete="email" autocorrect="off" autocapitalize="none" spellcheck="false" inputmode="email">
     </div>
     <div class="form-group">
       <label class="form-label" for="loginPassword">Senha</label>
@@ -3089,7 +3099,25 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
   if(loginBtn) {
+    // FIX mobile: adiciona touchstart para eliminar delay de 300ms em Android/iOS antigos
+    let _loginTouchFired = false;
+    loginBtn.addEventListener('touchstart', function(event) {
+      _loginTouchFired = true;
+      logAuthDebug('Listener touchstart loginBtn executado');
+      // não chama doLogin aqui — aguarda touchend para evitar scroll falso
+    }, { passive: true });
+
+    loginBtn.addEventListener('touchend', function(event) {
+      if(_loginTouchFired) {
+        _loginTouchFired = false;
+        event.preventDefault(); // evita o click fantasma depois do touchend
+        logAuthDebug('Listener touchend loginBtn executado');
+        doLogin();
+      }
+    });
+
     loginBtn.addEventListener('click', function(event) {
+      if(_loginTouchFired) { _loginTouchFired = false; return; } // já foi chamado por touch
       event.preventDefault();
       logAuthDebug('Listener click loginBtn executado');
       doLogin();
@@ -3099,6 +3127,12 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   if(forgotBtn) {
+    forgotBtn.style.touchAction = 'manipulation';
+    forgotBtn.addEventListener('touchend', function(event) {
+      event.preventDefault();
+      logAuthDebug('Listener touchend forgotPasswordBtn');
+      esqueceuSenha();
+    });
     forgotBtn.addEventListener('click', function(event) {
       event.preventDefault();
       logAuthDebug('Listener click forgotPasswordBtn executado');
