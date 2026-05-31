@@ -774,9 +774,9 @@ td.mono { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight
     </div>
     <div id="loginError" style="display:none;background:rgba(212,43,43,0.12);border:1px solid rgba(212,43,43,0.3);border-radius:8px;padding:10px 14px;font-size:13px;color:var(--red);margin-bottom:4px"></div>
     <div id="loginSuccess" style="display:none;background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.3);border-radius:8px;padding:10px 14px;font-size:13px;color:var(--green);margin-bottom:4px"></div>
-    <button class="login-btn" id="loginBtn" type="button">🦁 Entrar no Painel</button>
+    <button class="login-btn" id="loginBtn" type="button" onclick="doLogin()">🦁 Entrar no Painel</button>
     <div style="text-align:center;margin-top:14px">
-      <button id="forgotPasswordBtn" type="button" style="background:none;border:none;color:var(--text3);font-size:12px;cursor:pointer;text-decoration:underline">Esqueci minha senha</button>
+      <button id="forgotPasswordBtn" type="button" onclick="esqueceuSenha()" style="background:none;border:none;color:var(--text3);font-size:12px;cursor:pointer;text-decoration:underline">Esqueci minha senha</button>
     </div>
   </div>
 </div>
@@ -1740,8 +1740,11 @@ let GAS_URL = '';
     // Show loading screen while checking session
     const loadingEl = document.getElementById('loadingScreen');
     if(loadingEl) { loadingEl.style.display='flex'; }
-
+    const _sessionTimeout = setTimeout(function() {
+      if(loadingEl) loadingEl.style.display='none';
+    }, 5000);
     const { data: { session }, error } = await sb.auth.getSession();
+    clearTimeout(_sessionTimeout);
     logAuthDebug('Retorno getSession', { hasSession: Boolean(session), error });
 
     if(loadingEl) { loadingEl.style.display='none'; }
