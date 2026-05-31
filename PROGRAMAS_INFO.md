@@ -229,3 +229,40 @@ O projeto `ruja-nextjs` usa **Tailwind CSS v4** com `@tailwindcss/postcss v4`.
 - Vermelho RUJA: `#D42B2B`
 - Inputs: fundo escuro, borda sutil, focus vermelho
 - Botões: vermelho sólido, uppercase, arredondados
+
+
+---
+
+## Status de Produção
+
+**Data:** 2026-05-31
+**Status:** ✅ PRONTO PARA PRODUÇÃO
+
+### Auditoria de Estabilidade — Resultado Final
+
+| Etapa | Módulo | Status |
+|-------|--------|--------|
+| 1 | Autenticação | ✅ Aprovado |
+| 2 | Jovens | ✅ Aprovado |
+| 3 | Frequência | ✅ Aprovado |
+| 4 | Status Automático | ✅ Aprovado |
+| 5 | Recuperação | ✅ Aprovado |
+| 6 | Líderes | ✅ Aprovado |
+| 7 | Departamentos | ✅ Aprovado |
+| 8 | Metas | ✅ Aprovado |
+| 9 | Aniversários | ✅ Aprovado |
+| 10 | Configurações | ✅ Aprovado |
+| 11 | Storage | ✅ Aprovado |
+| 12 | Dashboard | ✅ Aprovado |
+| 13 | Mobile | ✅ Aprovado |
+| 14 | Performance | ✅ Aprovado |
+| 15 | Segurança | ✅ Aprovado |
+| 16 | Banco de Dados | ✅ Aprovado |
+
+### Checklist de Deploy
+- [ ] Variáveis de ambiente no Vercel configuradas
+- [ ] `NEXT_PUBLIC_SUPABASE_URL` → URL do projeto Supabase
+- [ ] `NEXT_PUBLIC_SUPABASE_ANON_KEY` → Anon key
+- [ ] `NEXT_PUBLIC_FOTO_BUCKET` → `ruja-jovens-fotos`
+- [ ] Domínio customizado configurado (opcional)
+- [ ] Testar login mobile após deploy
