@@ -148,3 +148,31 @@ No Safari iOS, `100vh` inclui a barra de endereço, causando corte da tela de lo
 **Arquivo:** `index.html` | Commit: pendente
 
 ---
+
+---
+
+## [2026-05-30] — Fase 2 + Bugs Baixos
+
+**M6 — pullFromSheets sem merge seguro**
+- Adicionado `confirm()` antes de reimportar do GAS explicando o comportamento
+- Try/catch com toast de sucesso/erro + recarregamento automático após importação
+- Arquivo: `index.html`
+
+**M8 — Bottom nav com apenas 4 tabs**
+- Aniversários adicionado como 4ª tab direta (substituiu slot vazio)
+- `openMobileMenu()` reescrito com drawer bottom-sheet completo:
+  Recuperação, Departamentos, Líderes, Metas, Alertas, Líder Supremo, Configurações
+- Arquivo: `index.html`
+
+**B3 — gasUrlInput não editável**
+- Campo `<input id="gasUrlInput">` adicionado na tela de Configurações → card Sincronização
+- Função `salvarGasUrl()` implementada: salva em `GAS_URL`, localStorage e tabela `config`
+- Arquivo: `index.html`
+
+**B5 — ruja_audit_logs nunca escrita**
+- `_auditLog()` genérico criado (acao, tabela, registroId, dadosAntes, dadosDepois)
+- Hooks adicionados em: `deleteJovemUI`, `deleteLider`, `saveRegras`
+- Audit de fotos já existia via `_auditFoto()` (mantido)
+- Arquivo: `index.html`
+
+**Validação final: 27/27 OK**
