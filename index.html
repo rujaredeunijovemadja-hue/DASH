@@ -1153,7 +1153,7 @@ td.mono { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight
             <button class="btn btn-ghost btn-sm" onclick="pullFromSheets(false).then(()=>{renderAll();showToast('Dados atualizados!')})">⬇️ Puxar agora</button>
             <button class="btn btn-ghost btn-sm" onclick="pullFromSheets(true).then(()=>{renderAll();showToast('Dados puxados (forçado)!')})" title="Descarta alterações locais e força puxar da planilha">⚠️ Forçar pull</button>
             <button class="btn btn-ghost btn-sm" onclick="pushToSheets()">⬆️ Enviar agora</button>
-            <button class="btn btn-ghost btn-sm" onclick="recalcularTodosLideres();saveData();renderAll();showToast('Líderes recalculados!')" title="Relê a tabela de Líderes e atualiza o campo Líder de cada jovem pelo departamento" style="border-color:rgba(245,158,11,0.4);color:var(--yellow)">🔄 Recalcular líderes</button>
+            <button class="btn btn-ghost btn-sm" onclick="(async()=>{recalcularTodosLideres();await saveData();renderAll();showToast('Líderes recalculados!');})()" title="Relê a tabela de Líderes e atualiza o campo Líder de cada jovem pelo departamento" style="border-color:rgba(245,158,11,0.4);color:var(--yellow)">🔄 Recalcular líderes</button>
           </div>
           <!-- Migração GAS → Supabase (C9-fix) -->
           <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)" id="migracaoGasSection">
@@ -1982,22 +1982,8 @@ const mapLider = r => ({
   departamento: r.departamento, funcao: r.funcao, dataNasc: r.data_nasc,
 });
 
-// ─── SAVE DATA (Supabase como primário, localStorage como cache) ──
-async function saveData() {
-  // Limpa inválidos
-  jovens        = jovens.filter(j => j && j.id && j.nome && j.nome.trim());
-  lideres       = lideres.filter(l => l && l.id && l.nome && l.nome.trim());
-  departamentos = departamentos.filter(d => d && d.id && d.nome && d.nome.trim());
-  frequencias   = frequencias.filter(f => f && f.id && f.jovemId);
-  recuperacoes  = recuperacoes.filter(r => r && r.id && r.jovemId);
 
-  // Cache local para offline
-  localStorage.setItem('ruja_cache_jovens',        JSON.stringify(jovens));
-  localStorage.setItem('ruja_cache_departamentos',  JSON.stringify(departamentos));
-
-  // Snapshot mensal
-  await gravarSnapshotMensal();
-}
+// saveData removida — canônica no final
 
 // ─── UPSERT JOVEM ─────────────────────────────────────────────
 async function upsertJovem(j) {
@@ -2468,25 +2454,7 @@ function exportCSVTudo() {
   ['jovens','lideres','departamentos','frequencias'].forEach(t => exportCSV(t));
 }
 
-function saveData() {
-  // Remove registros inválidos antes de salvar (evita linhas em branco no Sheets)
-  jovens        = jovens.filter(j => j && j.id && j.nome && j.nome.trim());
-  lideres       = lideres.filter(l => l && l.id && l.nome && l.nome.trim());
-  departamentos = departamentos.filter(d => d && d.id && d.nome && d.nome.trim());
-  frequencias   = frequencias.filter(f => f && f.id && f.jovemId);
-  recuperacoes  = recuperacoes.filter(r => r && r.id && r.jovemId);
-
-  localStorage.setItem('jovens',JSON.stringify(jovens));
-  localStorage.setItem('frequencias',JSON.stringify(frequencias));
-  localStorage.setItem('recuperacoes',JSON.stringify(recuperacoes));
-  localStorage.setItem('departamentos',JSON.stringify(departamentos));
-  localStorage.setItem('lideres',JSON.stringify(lideres));
-  localStorage.setItem('liderSupremo',JSON.stringify(liderSupremo));
-  localStorage.setItem('metas',JSON.stringify(metas));
-  gravarSnapshotMensal();
-  schedulePush();
-  marcarDadosSujos();
-}
+// saveData removida — canônica no final
 
 function gravarSnapshotMensal() {
   const mesAtual = new Date().toISOString().slice(0,7); // YYYY-MM
@@ -4018,7 +3986,7 @@ function saveFreq() {
     count++;
   });
 
-  saveData();
+  await saveData();
   closeModal('modalFreq');
   showToast(`✅ ${count} presenças registradas!`);
   renderFrequencia();
@@ -5407,25 +5375,22 @@ async function gravarSnapshotMensal() {
   }
 }
 
+// saveData removida — canônica no final
+// ─── saveData() — versão canônica ─────────────────────────────
 async function saveData() {
-  jovens = jovens.filter(j => j && j.id && j.nome && j.nome.trim());
-  lideres = lideres.filter(l => l && l.id && l.nome && l.nome.trim());
+  jovens        = jovens.filter(j => j && j.id && j.nome && j.nome.trim());
+  lideres       = lideres.filter(l => l && l.id && l.nome && l.nome.trim());
   departamentos = departamentos.filter(d => d && d.id && d.nome && d.nome.trim());
-  frequencias = frequencias.filter(f => f && f.id && f.jovemId);
-  recuperacoes = recuperacoes.filter(r => r && r.id && r.jovemId);
-
-  localStorage.setItem('jovens', JSON.stringify(jovens));
-  localStorage.setItem('frequencias', JSON.stringify(frequencias));
-  localStorage.setItem('recuperacoes', JSON.stringify(recuperacoes));
-  localStorage.setItem('departamentos', JSON.stringify(departamentos));
-  localStorage.setItem('lideres', JSON.stringify(lideres));
-  localStorage.setItem('liderSupremo', JSON.stringify(liderSupremo));
-  localStorage.setItem('metas', JSON.stringify(metas));
-  localStorage.setItem('regras', JSON.stringify(regras));
-  localStorage.setItem('ruja_cache_jovens', JSON.stringify(jovens));
+  frequencias   = frequencias.filter(f => f && f.id && f.jovemId);
+  recuperacoes  = recuperacoes.filter(r => r && r.id && r.jovemId);
+  localStorage.setItem('ruja_cache_jovens',        JSON.stringify(jovens));
   localStorage.setItem('ruja_cache_departamentos', JSON.stringify(departamentos));
+  localStorage.setItem('ruja_cache_lideres',       JSON.stringify(lideres));
+  ['jovens','frequencias','recuperacoes','departamentos','lideres',
+   'liderSupremo','metas','regras','historicoMensal'].forEach(k => localStorage.removeItem(k));
   await gravarSnapshotMensal();
 }
+
 </script>
 </body>
 </html>
