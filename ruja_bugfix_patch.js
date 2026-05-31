@@ -1,3 +1,13 @@
+// ⚠️  ARQUIVO OBSOLETO — NÃO UTILIZAR
+// Todas as correções deste arquivo foram integradas diretamente ao index.html.
+// Mantido apenas para histórico. Última integração: 2026-05-30
+//
+// bugfix patch — ver CHANGELOG_RUJA.md para detalhes
+//
+// Original abaixo (inativo):
+// ─────────────────────────────────────────────────────────────
+
+/*
 // ═══════════════════════════════════════════════════════════════════════
 // RUJA — PATCH DE CORREÇÕES CRÍTICAS
 // Versão: 2025-01
@@ -339,3 +349,5 @@ if (typeof _origOpenModal === 'function') {
 }
 
 console.log('✅ RUJA Bugfix Patch carregado — aniversários, metas, botões de edição e fonte de dados corrigidos.');
+
+*/
