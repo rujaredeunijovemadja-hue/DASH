@@ -1,3 +1,13 @@
+// ⚠️  ARQUIVO OBSOLETO — NÃO UTILIZAR
+// Todas as correções deste arquivo foram integradas diretamente ao index.html.
+// Mantido apenas para histórico. Última integração: 2026-05-30
+//
+// CRUD patch — ver CHANGELOG_RUJA.md para detalhes
+//
+// Original abaixo (inativo):
+// ─────────────────────────────────────────────────────────────
+
+/*
 // ═══════════════════════════════════════════════════════════════
 // RUJA — PATCH DAS FUNÇÕES CRUD (substituir funções existentes)
 // Cada função abaixo substitui a versão localStorage/GAS equivalente
@@ -251,3 +261,5 @@ async function deleteRecup(id) {
     showToast('Erro ao excluir: ' + e.message);
   }
 }
+
+*/
