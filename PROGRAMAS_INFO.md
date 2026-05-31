@@ -123,3 +123,32 @@ Browser
 ---
 
 *Última atualização: 2026-05-30 — Auditoria completa e correção de 12 bugs críticos*
+
+---
+
+## Histórico de Atualizações deste Arquivo
+
+| Data | Alteração |
+|------|-----------|
+| 2026-05-30 | Criação inicial — auditoria completa |
+| 2026-05-30 | Adicionados: pullFromSheets (M6), bottom nav (M8), gasUrlInput (B3), _auditLog (B5), login mobile (MOB) |
+| 2026-05-30 | Módulos atualizados: Configurações (gasUrlInput editável), Mobile (bottom nav expandido) |
+
+## Bugs Resolvidos (resumo)
+
+| ID | Descrição | Status |
+|----|-----------|--------|
+| C1-C12 | 12 bugs críticos | ✅ Corrigidos |
+| M1-M8 | 8 bugs médios aplicáveis | ✅ Corrigidos |
+| B3, B5 | Bugs baixos priorizados | ✅ Corrigidos |
+| MOB | Login mobile não funcionava | ✅ Corrigido |
+
+## Riscos Atualizados
+
+| Risco | Severidade | Status |
+|-------|-----------|--------|
+| IDs como String(Date.now()) | Médio | Aberto — migrar para UUID futuramente |
+| Datas como TEXT | Médio | Aberto — funcional mas limita queries |
+| RLS sem isolamento por papel | Médio | Aberto — aceitável para uso interno |
+| localStorage com dados pessoais | Baixo | Aberto — cache apenas, dados no Supabase |
+| ruja_audit_logs cobertura parcial | Baixo | Parcialmente resolvido — B5 expandiu |
