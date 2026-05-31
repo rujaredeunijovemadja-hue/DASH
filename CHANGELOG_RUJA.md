@@ -319,3 +319,28 @@ Novo repositório: https://github.com/rujaredeunijovemadja-hue/ruja-nextjs
 - TypeScript: ✅ zero erros
 - Next.js 16: ✅ build limpo
 - Rotas: `/login` (estática) + `/ruja` (dinâmica protegida)
+
+---
+
+## [2026-05-31] — Fix: Identidade Visual RUJA no Next.js
+
+**Bug:** Layout aparecia sem CSS após migração para Next.js.
+
+**Causa raiz:** O projeto usa **Tailwind CSS v4** com `@tailwindcss/postcss v4`.
+O `globals.css` tinha as diretivas `@tailwind base/components/utilities` — sintaxe do **v3**.
+No v4, essas diretivas não existem. O CSS era compilado mas as classes Tailwind não eram geradas.
+
+**Sintoma:** HTML cru, botões sem estilo, inputs com aparência padrão do navegador, fundo branco.
+
+**Correção:**
+- `globals.css`: trocado `@tailwind` por `@import "tailwindcss"` (sintaxe v4)
+- `@theme {}`: vermelho Tailwind sobrescrito com `#D42B2B` (vermelho RUJA exato)
+- Estilos globais RUJA restaurados: body escuro, scrollbar, safe-area, animações
+- Utilitários `.ruja-card`, `.ruja-input`, `.ruja-btn` adicionados como fallback
+
+**Regra adicionada ao PROGRAMAS_INFO.md:**
+> Toda reestruturação Next.js deve preservar a identidade visual RUJA.
+> O projeto usa Tailwind v4 — sintaxe `@import "tailwindcss"`, não `@tailwind`.
+
+**Build:** CSS gerado: 40KB com todas as classes + cores RUJA | TypeScript ✅
+**Commits:** `1c0393f`, `b1118afc`
