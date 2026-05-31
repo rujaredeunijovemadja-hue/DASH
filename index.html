@@ -2978,7 +2978,7 @@ async function doLogin() {
     const result = await sb.auth.signInWithPassword({ email, password });
     data  = result.data;
     error = result.error;
-    logAuthDebug('Retorno signInWithPassword', { data, error });
+    logAuthDebug('Retorno signInWithPassword', { ok: Boolean(data?.user), erro: error?.message });
   } catch(e) {
     btn.textContent = '🦁 Entrar no Painel';
     btn.disabled    = false;
@@ -3042,7 +3042,7 @@ async function esqueceuSenha() {
   const email = (emailEl.value || '').trim();
 
   ocultarErroLogin();
-  logAuthDebug('Email recuperacao lido', email);
+  logAuthDebug('Email recuperacao preenchido', Boolean(email));
 
   if(!email) {
     mostrarErroLogin('Digite seu e-mail no campo acima antes de recuperar a senha.');
@@ -3068,12 +3068,12 @@ async function esqueceuSenha() {
 
   let error;
   try {
-    logAuthDebug('Chamando resetPasswordForEmail', { email, redirectTo: window.location.origin });
+    logAuthDebug('Chamando resetPasswordForEmail');
     const result = await sb.auth.resetPasswordForEmail(email, {
       redirectTo: window.location.origin,
     });
     error = result.error;
-    logAuthDebug('Retorno resetPasswordForEmail', { error });
+    logAuthDebug('Retorno resetPasswordForEmail', { ok: !error, erro: error?.message });
   } catch(e) {
     if(btn) { btn.textContent = origText; btn.disabled = false; }
     console.error('[RUJA Auth] Excecao no resetPasswordForEmail:', e);
@@ -4537,7 +4537,7 @@ function _resetFotoModal(jovem) {
   } else {
     // Sem foto: mostra inicial do nome ou '?'
     const nome = jovem ? jovem.nome : '';
-    if (preview) preview.innerHTML = `<span id="fotoPreviewInicial">${nome ? nome.charAt(0).toUpperCase() : '?'}</span>`;
+    if (preview) preview.innerHTML = `<span class="foto-preview-inicial">${nome ? nome.charAt(0).toUpperCase() : '?'}</span>`;
     if (btnRem) btnRem.style.display = 'none';
   }
 }
@@ -4676,7 +4676,7 @@ function removerFotoLiderSupremo() {
   const preview = document.getElementById('lsFotoPreview');
   const btn     = document.getElementById('lsBtnRemoverFoto');
   const status  = document.getElementById('lsFotoStatus');
-  if (preview) preview.innerHTML = `<span id="lsFotoPreviewInicial">?</span>`;
+  if (preview) preview.innerHTML = `<span class="foto-preview-inicial">?</span>`;
   if (btn)     btn.style.display = 'none';
   if (status)  status.textContent = '';
 }
@@ -4695,7 +4695,7 @@ function removerFotoJovem() {
     if (btnRem) btnRem.style.display = 'none';
     const nomeEl = document.getElementById('jNome');
     const ini = nomeEl?.value ? nomeEl.value.charAt(0).toUpperCase() : '?';
-    if (preview) preview.innerHTML = `<span id="fotoPreviewInicial">${ini}</span>`;
+    if (preview) preview.innerHTML = `<span class="foto-preview-inicial">${ini}</span>`;
     return;
   }
 
@@ -4718,7 +4718,7 @@ function removerFotoJovem() {
     _auditFoto('remocao_foto_jovem', _fotoEditId, {});
 
     const ini = j.nome ? j.nome.charAt(0).toUpperCase() : '?';
-    if (preview) preview.innerHTML = `<span id="fotoPreviewInicial">${ini}</span>`;
+    if (preview) preview.innerHTML = `<span class="foto-preview-inicial">${ini}</span>`;
     if (btnRem) btnRem.style.display = 'none';
     if (status) { status.textContent = 'Foto removida.'; status.style.color='var(--text3)'; }
     showToast('Foto removida.');
