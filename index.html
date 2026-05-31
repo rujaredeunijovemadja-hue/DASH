@@ -310,8 +310,8 @@ td.mono { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight
 .modal-title { font-size:18px; font-weight:700; margin-bottom:20px; display:flex; align-items:center; justify-content:space-between; }
 .modal-close { background:none; border:none; color:var(--text3); cursor:pointer; font-size:20px; }
 .form-group { margin-bottom:16px; }
-.form-label { font-size:12px; font-weight:600; color:var(--text2); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px; display:block; }
-.form-input,.form-select,.form-textarea { width:100%; background:var(--black3); border:1px solid var(--border); border-radius:8px; padding:10px 14px; color:var(--text); font-size:14px; font-family:'Barlow',sans-serif; transition:border-color 0.15s; }
+.form-label { font-size:12px; font-weight:600; color:var(--text2); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px; display:block; touch-action:manipulation; -webkit-tap-highlight-color:transparent; }
+.form-input,.form-select,.form-textarea { width:100%; background:var(--black3); border:1px solid var(--border); border-radius:8px; padding:10px 14px; color:var(--text); font-size:14px; font-family:'Barlow',sans-serif; transition:border-color 0.15s; touch-action:manipulation; }
 .form-input:focus,.form-select:focus,.form-textarea:focus { outline:none; border-color:var(--red); }
 .form-input::placeholder { color:var(--text3); }
 .form-textarea { resize:vertical; min-height:70px; }
@@ -319,7 +319,7 @@ td.mono { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight
 .form-footer { display:flex; gap:10px; justify-content:flex-end; margin-top:20px; padding-top:16px; border-top:1px solid var(--border); }
 
 /* ─── BUTTONS ─── */
-.btn { padding:8px 16px; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; transition:all 0.15s; border:none; font-family:'Barlow',sans-serif; }
+.btn { padding:8px 16px; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; transition:all 0.15s; border:none; font-family:'Barlow',sans-serif;  touch-action:manipulation; -webkit-tap-highlight-color:transparent; }
 .btn-primary { background:var(--red); color:#fff; }
 .btn-primary:hover { background:var(--red-light); }
 .btn-ghost { background:transparent; color:var(--text2); border:1px solid var(--border); }
@@ -3105,25 +3105,9 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
   if(loginBtn) {
-    // FIX mobile: adiciona touchstart para eliminar delay de 300ms em Android/iOS antigos
-    let _loginTouchFired = false;
-    loginBtn.addEventListener('touchstart', function(event) {
-      _loginTouchFired = true;
-      logAuthDebug('Listener touchstart loginBtn executado');
-      // não chama doLogin aqui — aguarda touchend para evitar scroll falso
-    }, { passive: true });
-
-    loginBtn.addEventListener('touchend', function(event) {
-      if(_loginTouchFired) {
-        _loginTouchFired = false;
-        event.preventDefault(); // evita o click fantasma depois do touchend
-        logAuthDebug('Listener touchend loginBtn executado');
-        doLogin();
-      }
-    });
-
+    // touch-action:manipulation no CSS elimina o delay de 300ms nativamente.
+    // Apenas um listener click é necessário — funciona em touch e mouse.
     loginBtn.addEventListener('click', function(event) {
-      if(_loginTouchFired) { _loginTouchFired = false; return; } // já foi chamado por touch
       event.preventDefault();
       logAuthDebug('Listener click loginBtn executado');
       doLogin();
@@ -3133,12 +3117,6 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   if(forgotBtn) {
-    forgotBtn.style.touchAction = 'manipulation';
-    forgotBtn.addEventListener('touchend', function(event) {
-      event.preventDefault();
-      logAuthDebug('Listener touchend forgotPasswordBtn');
-      esqueceuSenha();
-    });
     forgotBtn.addEventListener('click', function(event) {
       event.preventDefault();
       logAuthDebug('Listener click forgotPasswordBtn executado');
@@ -4915,7 +4893,7 @@ function openMobileMenu() {
       bnavGo(p.page, null);
     });
     btn.addEventListener('touchend', function(e) {
-      e.preventDefault();
+      // sem preventDefault — touch-action:manipulation no CSS já elimina o delay
       drawer.remove();
       bnavGo(p.page, null);
     });
